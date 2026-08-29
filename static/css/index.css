@@ -149,8 +149,12 @@ body {
 }
 
 .model-card-header {
+  align-items: center;
   background: #fff;
   border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
   padding: 0.75rem 1rem;
 }
 
@@ -167,6 +171,56 @@ body {
   background: linear-gradient(145deg, #f8fafc 0%, #eef2f7 100%);
   height: 360px;
   position: relative;
+}
+
+.animation-section {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding-top: 3rem;
+}
+
+.section-lead {
+  color: var(--muted);
+  margin: -0.75rem auto 1.5rem;
+  max-width: 760px;
+}
+
+.animation-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0 auto;
+  max-width: 1050px;
+}
+
+.animation-stage {
+  height: 480px;
+}
+
+.animation-toggle {
+  align-items: center;
+  background: #f5f7fa;
+  border: 1px solid #cfd5de;
+  border-radius: 999px;
+  color: #3f4855;
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-family: "Google Sans", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  gap: 0.36rem;
+  line-height: 1;
+  padding: 0.4rem 0.62rem;
+}
+
+.animation-toggle:hover:not(:disabled),
+.animation-toggle:focus-visible {
+  background: #edf1f6;
+  border-color: #7f8a98;
+}
+
+.animation-toggle:disabled {
+  cursor: wait;
+  opacity: 0.5;
 }
 
 .rig-canvas {
@@ -325,6 +379,10 @@ body {
   .viewer-stage {
     height: 420px;
   }
+
+  .animation-stage {
+    height: 460px;
+  }
 }
 
 @media screen and (max-width: 1100px) {
@@ -335,6 +393,10 @@ body {
   .viewer-stage {
     height: 410px;
   }
+
+  .animation-stage {
+    height: 460px;
+  }
 }
 
 @media screen and (max-width: 640px) {
@@ -342,7 +404,15 @@ body {
     grid-template-columns: 1fr;
   }
 
+  .animation-grid {
+    grid-template-columns: 1fr;
+  }
+
   .viewer-stage {
     height: 430px;
+  }
+
+  .animation-stage {
+    height: 450px;
   }
 }

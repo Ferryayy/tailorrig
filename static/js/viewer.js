@@ -14,7 +14,10 @@ const BONE_KEYWORDS = Object.freeze([
 
 const loader = new GLTFLoader();
 const CLAY_COLOR = 0xb8bec8;
-const CLAY_ROUGHNESS = 0.68;
+const CLAY_ROUGHNESS = 0.82;
+const MODEL_TARGET_SIZE = 2.25;
+const CAMERA_PADDING = 1.14;
+const NORMAL_CREASE_COSINE = Math.cos(THREE.MathUtils.degToRad(52));
 
 const BONE_GROUP_COLORS = Object.freeze({
   body: 0x2f80ed,
@@ -28,6 +31,7 @@ const DEFAULT_BONE_GROUP_COLOR = 0x64748b;
 const JOINT_RADIUS = 0.027;
 const BONE_RADIUS = 0.012;
 const CYLINDER_UP_AXIS = new THREE.Vector3(0, 1, 0);
+const INITIAL_VIEW_DIRECTION = new THREE.Vector3(0.82, 0.24, 1.4).normalize();
 
 function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -60,12 +64,130 @@ function createClayMaterial() {
     color: CLAY_COLOR,
     metalness: 0,
     roughness: CLAY_ROUGHNESS,
-    side: THREE.DoubleSide,
+    side: THREE.FrontSide,
     transparent: false,
     opacity: 1,
     depthWrite: true,
     vertexColors: false,
   });
+}
+
+// Several exported examples contain a separate vertex normal for almost every
+// triangle. Average normals only across coincident vertices whose source normals
+// already point in a similar direction, preserving intentional creases while
+// removing the faceted/rippled shading caused by split export normals.
+function createSmoothedGeometry(sourceGeometry) {
+  const geometry = sourceGeometry.clone();
+  const position = geometry.getAttribute("position");
+  const normal = geometry.getAttribute("normal");
+
+  if (!position) {
+    return geometry;
+  }
+
+  if (!normal) {
+    geometry.computeVertexNormals();
+    return geometry;
+  }
+
+  geometry.computeBoundingBox();
+  const diagonal = geometry.boundingBox
+    .getSize(new THREE.Vector3())
+    .length();
+  const quantization = Math.max(diagonal * 1e-6, 1e-7);
+  const positionGroups = new Map();
+
+  for (let vertexIndex = 0; vertexIndex < position.count; vertexIndex += 1) {
+    const key = [
+      Math.round(position.getX(vertexIndex) / quantization),
+      Math.round(position.getY(vertexIndex) / quantization),
+      Math.round(position.getZ(vertexIndex) / quantization),
+    ].join(":");
+    const group = positionGroups.get(key);
+
+    if (group) {
+      group.push(vertexIndex);
+    } else {
+      positionGroups.set(key, [vertexIndex]);
+    }
+  }
+
+  const smoothedNormals = new Float32Array(normal.count * 3);
+  const referenceNormal = new THREE.Vector3();
+  const candidateNormal = new THREE.Vector3();
+  const averagedNormal = new THREE.Vector3();
+
+  positionGroups.forEach((vertexIndices) => {
+    vertexIndices.forEach((vertexIndex) => {
+      referenceNormal.fromBufferAttribute(normal, vertexIndex).normalize();
+      averagedNormal.set(0, 0, 0);
+
+      vertexIndices.forEach((candidateIndex) => {
+        candidateNormal.fromBufferAttribute(normal, candidateIndex).normalize();
+        if (referenceNormal.dot(candidateNormal) >= NORMAL_CREASE_COSINE) {
+          averagedNormal.add(candidateNormal);
+        }
+      });
+
+      if (averagedNormal.lengthSq() <= Number.EPSILON) {
+        averagedNormal.copy(referenceNormal);
+      } else {
+        averagedNormal.normalize();
+      }
+
+      averagedNormal.toArray(smoothedNormals, vertexIndex * 3);
+    });
+  });
+
+  geometry.setAttribute("normal", new THREE.BufferAttribute(smoothedNormals, 3));
+  geometry.computeBoundingSphere();
+  return geometry;
+}
+
+function boxCorners(box) {
+  const { min, max } = box;
+  return [
+    new THREE.Vector3(min.x, min.y, min.z),
+    new THREE.Vector3(min.x, min.y, max.z),
+    new THREE.Vector3(min.x, max.y, min.z),
+    new THREE.Vector3(min.x, max.y, max.z),
+    new THREE.Vector3(max.x, min.y, min.z),
+    new THREE.Vector3(max.x, min.y, max.z),
+    new THREE.Vector3(max.x, max.y, min.z),
+    new THREE.Vector3(max.x, max.y, max.z),
+  ];
+}
+
+function fitDistanceForBox(box, camera, direction) {
+  const center = box.getCenter(new THREE.Vector3());
+  const right = new THREE.Vector3()
+    .crossVectors(camera.up, direction)
+    .normalize();
+  const screenUp = new THREE.Vector3()
+    .crossVectors(direction, right)
+    .normalize();
+  const verticalHalfFov = THREE.MathUtils.degToRad(camera.fov * 0.5);
+  const horizontalHalfFov = Math.atan(
+    Math.tan(verticalHalfFov) * Math.max(camera.aspect, 0.01),
+  );
+  const verticalTangent = Math.tan(verticalHalfFov);
+  const horizontalTangent = Math.tan(horizontalHalfFov);
+  let requiredDistance = 0;
+
+  boxCorners(box).forEach((corner) => {
+    const offset = corner.sub(center);
+    const depthTowardCamera = offset.dot(direction);
+    const horizontalExtent = Math.abs(offset.dot(right));
+    const verticalExtent = Math.abs(offset.dot(screenUp));
+
+    requiredDistance = Math.max(
+      requiredDistance,
+      depthTowardCamera + (horizontalExtent * CAMERA_PADDING) / horizontalTangent,
+      depthTowardCamera + (verticalExtent * CAMERA_PADDING) / verticalTangent,
+    );
+  });
+
+  return Math.max(requiredDistance, 0.01);
 }
 
 class RigViewer {
@@ -77,15 +199,25 @@ class RigViewer {
     this.status = card.querySelector(".viewer-status");
     this.controlsElement = card.querySelector(".viewer-controls");
     this.boneButtonHost = card.querySelector(".bone-mode-buttons");
+    this.playbackButton = card.querySelector(".animation-toggle");
 
     this.mode = "mesh";
     this.activeGroup = null;
     this.model = null;
+    this.modelRoot = null;
     this.ground = null;
     this.skeletonVisual = null;
+    this.skeletonJoints = [];
+    this.skeletonSegments = [];
     this.meshRecords = [];
     this.boneRecords = [];
+    this.mixer = null;
+    this.animationAction = null;
+    this.isAnimationPlaying = true;
     this.isVisible = true;
+    this.hasUserFramedView = false;
+    this.fittedBox = null;
+    this.lastFrameTime = null;
   }
 
   async init() {
@@ -96,8 +228,12 @@ class RigViewer {
     try {
       const gltf = await loader.loadAsync(this.modelUrl);
       this.model = gltf.scene;
-      this.scene.add(this.model);
+      this.modelRoot = new THREE.Group();
+      this.modelRoot.add(this.model);
+      this.scene.add(this.modelRoot);
+
       this.prepareModel();
+      this.prepareAnimation(gltf.animations);
       this.fitModelToStage();
       this.buildBoneButtons();
       this.enableControls();
@@ -114,7 +250,6 @@ class RigViewer {
     this.scene.background = new THREE.Color(0xf3f5f8);
 
     this.camera = new THREE.PerspectiveCamera(32, 1, 0.01, 100);
-    this.camera.position.set(2.8, 1.25, 4.15);
 
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
@@ -124,22 +259,24 @@ class RigViewer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1;
+    this.renderer.toneMappingExposure = 0.95;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
 
-    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0xaeb7c5, 2.2);
+    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0xb8c0cc, 2.35);
     this.scene.add(hemisphereLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 3.2);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.35);
     keyLight.position.set(3.5, 5, 4.5);
     keyLight.castShadow = true;
-    keyLight.shadow.mapSize.set(1024, 1024);
+    keyLight.shadow.mapSize.set(1536, 1536);
     keyLight.shadow.camera.near = 0.1;
     keyLight.shadow.camera.far = 20;
+    keyLight.shadow.bias = -0.00015;
+    keyLight.shadow.normalBias = 0.035;
     this.scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xbfd6ff, 1.1);
+    const fillLight = new THREE.DirectionalLight(0xc9dcff, 1.2);
     fillLight.position.set(-4, 2, -3);
     this.scene.add(fillLight);
 
@@ -149,13 +286,28 @@ class RigViewer {
     this.orbitControls.enablePan = false;
     this.orbitControls.autoRotate = true;
     this.orbitControls.autoRotateSpeed = 0.65;
-    this.orbitControls.minDistance = 2.2;
-    this.orbitControls.maxDistance = 8;
     this.orbitControls.target.set(0, 0, 0);
+    this.orbitControls.addEventListener("start", () => {
+      this.hasUserFramedView = true;
+    });
 
-    this.renderer.setAnimationLoop(() => {
+    this.renderer.setAnimationLoop((time) => {
+      const delta = this.lastFrameTime === null
+        ? 0
+        : Math.min((time - this.lastFrameTime) / 1000, 0.1);
+      this.lastFrameTime = time;
+
       if (!this.isVisible) {
         return;
+      }
+
+      if (this.mixer && this.isAnimationPlaying) {
+        this.mixer.update(delta);
+      }
+
+      if (this.skeletonVisual) {
+        this.modelRoot.updateMatrixWorld(true);
+        this.updateSkeletonVisualPositions();
       }
 
       this.orbitControls.update();
@@ -184,6 +336,10 @@ class RigViewer {
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+
+    if (this.fittedBox && !this.hasUserFramedView) {
+      this.frameCameraToBox(this.fittedBox);
+    }
   }
 
   setupControlEvents() {
@@ -199,6 +355,14 @@ class RigViewer {
         this.setMode(button.dataset.mode);
       }
     });
+
+    this.playbackButton?.addEventListener("click", () => {
+      if (!this.animationAction || this.playbackButton.disabled) {
+        return;
+      }
+
+      this.setAnimationPlaying(!this.isAnimationPlaying);
+    });
   }
 
   prepareModel() {
@@ -212,32 +376,37 @@ class RigViewer {
       object.castShadow = true;
       object.receiveShadow = true;
 
+      const displayGeometry = createSmoothedGeometry(object.geometry);
       const displayMaterial = createClayMaterial();
+      const weightGeometry = object.isSkinnedMesh
+        ? this.createWeightGeometry(object, displayGeometry)
+        : null;
+      const weightMaterial = weightGeometry
+        ? new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          metalness: 0,
+          roughness: CLAY_ROUGHNESS,
+          side: THREE.FrontSide,
+          transparent: false,
+          opacity: 1,
+          depthWrite: true,
+          vertexColors: true,
+        })
+        : null;
+
+      object.geometry = displayGeometry;
       object.material = displayMaterial;
-
-      if (!object.isSkinnedMesh) {
-        return;
-      }
-
-      const weightGeometry = this.createWeightGeometry(object);
-      const weightMaterial = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        metalness: 0,
-        roughness: CLAY_ROUGHNESS,
-        side: THREE.DoubleSide,
-        transparent: false,
-        opacity: 1,
-        depthWrite: true,
-        vertexColors: true,
-      });
-
       this.meshRecords.push({
         mesh: object,
-        originalGeometry: object.geometry,
+        displayGeometry,
         displayMaterial,
         weightGeometry,
         weightMaterial,
       });
+
+      if (!object.isSkinnedMesh) {
+        return;
+      }
 
       object.skeleton.bones.forEach((bone) => {
         if (seenBones.has(bone.uuid)) {
@@ -245,14 +414,27 @@ class RigViewer {
         }
 
         seenBones.add(bone.uuid);
-        const group = classifyBone(bone.name);
-        this.boneRecords.push({ bone, group });
+        this.boneRecords.push({ bone, group: classifyBone(bone.name) });
       });
     });
   }
 
-  createWeightGeometry(skinnedMesh) {
-    const geometry = skinnedMesh.geometry.clone();
+  prepareAnimation(animations) {
+    const clip = animations?.[0];
+    if (!clip) {
+      return;
+    }
+
+    this.mixer = new THREE.AnimationMixer(this.model);
+    this.animationClip = clip;
+    this.animationAction = this.mixer.clipAction(clip);
+    this.animationAction.setLoop(THREE.LoopRepeat, Infinity);
+    this.animationAction.play();
+    this.mixer.update(0);
+  }
+
+  createWeightGeometry(skinnedMesh, displayGeometry) {
+    const geometry = displayGeometry.clone();
     const position = geometry.getAttribute("position");
     const skinIndex = geometry.getAttribute("skinIndex");
     const skinWeight = geometry.getAttribute("skinWeight");
@@ -309,44 +491,87 @@ class RigViewer {
   }
 
   fitModelToStage() {
-    this.model.updateMatrixWorld(true);
+    this.modelRoot.updateMatrixWorld(true);
 
-    const initialBox = new THREE.Box3().setFromObject(this.model);
+    const initialBox = this.computeContentBounds();
     const center = initialBox.getCenter(new THREE.Vector3());
     const size = initialBox.getSize(new THREE.Vector3());
     const largestDimension = Math.max(size.x, size.y, size.z) || 1;
+    const scale = MODEL_TARGET_SIZE / largestDimension;
 
-    this.model.position.sub(center);
-    this.model.scale.setScalar(2.15 / largestDimension);
-    this.model.updateMatrixWorld(true);
+    this.modelRoot.scale.setScalar(scale);
+    this.modelRoot.position.copy(center).multiplyScalar(-scale);
+    this.modelRoot.updateMatrixWorld(true);
 
-    const fittedBox = new THREE.Box3().setFromObject(this.model);
-    const fittedCenter = fittedBox.getCenter(new THREE.Vector3());
-    this.orbitControls.target.copy(fittedCenter);
+    this.fittedBox = initialBox.clone();
+    this.fittedBox.min.multiplyScalar(scale).add(this.modelRoot.position);
+    this.fittedBox.max.multiplyScalar(scale).add(this.modelRoot.position);
+    this.frameCameraToBox(this.fittedBox);
+    this.createGround(this.fittedBox);
+  }
 
+  computeContentBounds() {
+    if (!this.mixer || !this.animationClip) {
+      return new THREE.Box3().setFromObject(this.modelRoot, true);
+    }
+
+    const bounds = new THREE.Box3().makeEmpty();
+    const sampleCount = Math.max(
+      24,
+      Math.min(72, Math.ceil(this.animationClip.duration * 12)),
+    );
+
+    for (let sampleIndex = 0; sampleIndex <= sampleCount; sampleIndex += 1) {
+      const sampleTime = (this.animationClip.duration * sampleIndex) / sampleCount;
+      this.mixer.setTime(sampleTime);
+      this.modelRoot.updateMatrixWorld(true);
+      bounds.union(new THREE.Box3().setFromObject(this.modelRoot, true));
+    }
+
+    this.mixer.setTime(0);
+    this.modelRoot.updateMatrixWorld(true);
+    return bounds;
+  }
+
+  frameCameraToBox(box) {
+    const center = box.getCenter(new THREE.Vector3());
+    const distance = fitDistanceForBox(box, this.camera, INITIAL_VIEW_DIRECTION);
+    const radius = Math.max(
+      box.getBoundingSphere(new THREE.Sphere()).radius,
+      0.01,
+    );
+
+    this.camera.position
+      .copy(center)
+      .addScaledVector(INITIAL_VIEW_DIRECTION, distance);
+    this.camera.near = Math.max(distance / 100, 0.001);
+    this.camera.far = distance + radius * 6;
+    this.camera.lookAt(center);
+    this.camera.updateProjectionMatrix();
+
+    this.orbitControls.target.copy(center);
+    this.orbitControls.minDistance = Math.max(distance * 0.42, radius * 0.8);
+    this.orbitControls.maxDistance = distance * 4.5;
+    this.orbitControls.update();
+  }
+
+  createGround(box) {
+    const boxSize = box.getSize(new THREE.Vector3());
+    const groundSize = Math.max(boxSize.x, boxSize.z, 1) * 7;
     const groundMaterial = new THREE.ShadowMaterial({
       color: 0x7d8794,
-      opacity: 0.16,
+      opacity: 0.13,
       transparent: true,
     });
-    this.ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), groundMaterial);
+
+    this.ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(groundSize, groundSize),
+      groundMaterial,
+    );
     this.ground.rotation.x = -Math.PI / 2;
-    this.ground.position.y = fittedBox.min.y - 0.018;
+    this.ground.position.y = box.min.y - Math.max(boxSize.y * 0.008, 0.012);
     this.ground.receiveShadow = true;
     this.scene.add(this.ground);
-
-    const radius = Math.max(fittedBox.getSize(new THREE.Vector3()).length() * 0.72, 1.35);
-    this.camera.position.set(
-      fittedCenter.x + radius * 1.15,
-      fittedCenter.y + radius * 0.38,
-      fittedCenter.z + radius * 1.65,
-    );
-    this.camera.near = Math.max(radius / 100, 0.01);
-    this.camera.far = radius * 30;
-    this.camera.updateProjectionMatrix();
-    this.orbitControls.minDistance = radius * 0.9;
-    this.orbitControls.maxDistance = radius * 4.5;
-    this.orbitControls.update();
   }
 
   buildBoneButtons() {
@@ -372,7 +597,38 @@ class RigViewer {
     this.controlsElement.querySelectorAll(".viewer-mode").forEach((button) => {
       button.disabled = false;
     });
+
+    if (this.playbackButton && this.animationAction) {
+      this.playbackButton.disabled = false;
+      this.updatePlaybackButton();
+    }
+
     this.updateActiveButtons();
+  }
+
+  setAnimationPlaying(isPlaying) {
+    this.isAnimationPlaying = isPlaying;
+    this.updatePlaybackButton();
+  }
+
+  updatePlaybackButton() {
+    if (!this.playbackButton) {
+      return;
+    }
+
+    const icon = this.playbackButton.querySelector("i");
+    const label = this.playbackButton.querySelector(".playback-label");
+    this.playbackButton.setAttribute("aria-pressed", String(this.isAnimationPlaying));
+    this.playbackButton.setAttribute(
+      "aria-label",
+      this.isAnimationPlaying ? "Pause animation" : "Play animation",
+    );
+    icon?.classList.toggle("fa-pause", this.isAnimationPlaying);
+    icon?.classList.toggle("fa-play", !this.isAnimationPlaying);
+
+    if (label) {
+      label.textContent = this.isAnimationPlaying ? "Pause" : "Play";
+    }
   }
 
   setMode(nextMode, group = null) {
@@ -386,12 +642,12 @@ class RigViewer {
 
     this.restoreMeshMaterials();
     this.clearSkeletonVisual();
-    this.model.visible = true;
+    this.modelRoot.visible = true;
 
     if (nextMode === "weights") {
       this.applyWeightMaterials();
     } else if (nextMode === "skeleton") {
-      this.model.updateMatrixWorld(true);
+      this.modelRoot.updateMatrixWorld(true);
       this.createSkeletonVisual(group);
     }
 
@@ -402,6 +658,10 @@ class RigViewer {
 
   applyWeightMaterials() {
     this.meshRecords.forEach((record) => {
+      if (!record.weightGeometry || !record.weightMaterial) {
+        return;
+      }
+
       record.mesh.geometry = record.weightGeometry;
       record.mesh.material = record.weightMaterial;
     });
@@ -409,7 +669,7 @@ class RigViewer {
 
   restoreMeshMaterials() {
     this.meshRecords.forEach((record) => {
-      record.mesh.geometry = record.originalGeometry;
+      record.mesh.geometry = record.displayGeometry;
       record.mesh.material = record.displayMaterial;
     });
   }
@@ -445,6 +705,7 @@ class RigViewer {
       false,
     );
 
+    this.skeletonResources = { material, jointGeometry, boneGeometry };
     const visibleJointIds = new Set();
     const addJoint = (bone) => {
       if (visibleJointIds.has(bone.uuid)) {
@@ -453,9 +714,9 @@ class RigViewer {
 
       visibleJointIds.add(bone.uuid);
       const joint = new THREE.Mesh(jointGeometry, material);
-      joint.position.copy(bone.getWorldPosition(new THREE.Vector3()));
       joint.renderOrder = 11;
       visual.add(joint);
+      this.skeletonJoints.push({ bone, mesh: joint });
     };
 
     records.forEach(({ bone }) => {
@@ -466,28 +727,44 @@ class RigViewer {
       }
 
       addJoint(bone.parent);
-      const jointPosition = bone.getWorldPosition(new THREE.Vector3());
-      const parentPosition = bone.parent.getWorldPosition(new THREE.Vector3());
-      const direction = jointPosition.clone().sub(parentPosition);
-      const length = direction.length();
-
-      if (length <= Number.EPSILON) {
-        return;
-      }
-
       const boneSegment = new THREE.Mesh(boneGeometry, material);
-      boneSegment.position.copy(parentPosition).add(jointPosition).multiplyScalar(0.5);
-      boneSegment.quaternion.setFromUnitVectors(
-        CYLINDER_UP_AXIS,
-        direction.normalize(),
-      );
-      boneSegment.scale.set(1, length, 1);
       boneSegment.renderOrder = 10;
       visual.add(boneSegment);
+      this.skeletonSegments.push({
+        bone,
+        parentBone: bone.parent,
+        mesh: boneSegment,
+      });
     });
 
     this.skeletonVisual = visual;
     this.scene.add(visual);
+    this.updateSkeletonVisualPositions();
+  }
+
+  updateSkeletonVisualPositions() {
+    this.skeletonJoints.forEach(({ bone, mesh }) => {
+      mesh.position.copy(bone.getWorldPosition(new THREE.Vector3()));
+    });
+
+    this.skeletonSegments.forEach(({ bone, parentBone, mesh }) => {
+      const jointPosition = bone.getWorldPosition(new THREE.Vector3());
+      const parentPosition = parentBone.getWorldPosition(new THREE.Vector3());
+      const direction = jointPosition.clone().sub(parentPosition);
+      const length = direction.length();
+
+      mesh.visible = length > Number.EPSILON;
+      if (!mesh.visible) {
+        return;
+      }
+
+      mesh.position.copy(parentPosition).add(jointPosition).multiplyScalar(0.5);
+      mesh.quaternion.setFromUnitVectors(
+        CYLINDER_UP_AXIS,
+        direction.normalize(),
+      );
+      mesh.scale.set(1, length, 1);
+    });
   }
 
   clearSkeletonVisual() {
@@ -495,12 +772,14 @@ class RigViewer {
       return;
     }
 
-    this.skeletonVisual.traverse((object) => {
-      object.geometry?.dispose();
-      object.material?.dispose();
-    });
     this.scene.remove(this.skeletonVisual);
+    this.skeletonResources?.jointGeometry.dispose();
+    this.skeletonResources?.boneGeometry.dispose();
+    this.skeletonResources?.material.dispose();
     this.skeletonVisual = null;
+    this.skeletonResources = null;
+    this.skeletonJoints = [];
+    this.skeletonSegments = [];
   }
 
   updateActiveButtons() {

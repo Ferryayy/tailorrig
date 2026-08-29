@@ -18,7 +18,7 @@
       }
     }
   </script>
-  <script type="module" src="./static/js/viewer.js"></script>
+  <script type="module" src="./static/js/viewer.js?v=20260830-2"></script>
 </head>
 <body>
 
@@ -42,8 +42,8 @@
               <span class="author-block">Yajing Chen<sup>*&dagger;,1</sup>,</span>
               <span class="author-block">Xin Chen<sup>*,2</sup>,</span>
               <span class="author-block">Saidan Lu<sup>*,1</sup>,</span>
-              <span class="author-block">Weikai Chen<sup>1</sup>,</span>
               <span class="author-block">Yeqi Yuan<sup>3</sup>,</span>
+              <span class="author-block">Weikai Chen<sup>1</sup>,</span>
               <span class="author-block">Changyu Hu<sup>4</sup>,</span>
               <span class="author-block">Cheng Zeng<sup>4</sup>,</span>
               <span class="author-block">Xin Wang<sup>1</sup></span>
@@ -252,13 +252,69 @@
     </div>
   </section>
 
+  <section class="section animation-section" aria-labelledby="animation-title">
+    <div class="container is-widescreen">
+      <h2 class="title is-3 has-text-centered" id="animation-title">Animation Results</h2>
+      <p class="section-lead has-text-centered">
+        Compare the animated ground truth and our generated rig with the same mesh, skeleton, and skinning-weight views.
+      </p>
+      <div class="model-grid animation-grid">
+        <article class="model-card rig-viewer" data-model="./source/anim/gt.glb" data-animation="true">
+          <header class="model-card-header">
+            <h3>Ground Truth</h3>
+            <button class="animation-toggle" type="button" aria-label="Pause animation" aria-pressed="true" disabled>
+              <span aria-hidden="true"><i class="fa-solid fa-pause"></i></span>
+              <span class="playback-label">Pause</span>
+            </button>
+          </header>
+          <div class="viewer-stage animation-stage">
+            <canvas class="rig-canvas" aria-label="Interactive ground-truth animation"></canvas>
+            <div class="viewer-status" role="status">Loading animation…</div>
+          </div>
+          <div class="viewer-controls" aria-label="Ground-truth animation display modes">
+            <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
+            <span class="bone-mode-buttons"></span>
+            <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
+          </div>
+          <p class="model-instructions">
+            <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
+            Drag to rotate · Scroll or pinch to zoom · Animation loops automatically
+          </p>
+        </article>
+
+        <article class="model-card rig-viewer" data-model="./source/anim/ours.glb" data-animation="true">
+          <header class="model-card-header">
+            <h3>Ours</h3>
+            <button class="animation-toggle" type="button" aria-label="Pause animation" aria-pressed="true" disabled>
+              <span aria-hidden="true"><i class="fa-solid fa-pause"></i></span>
+              <span class="playback-label">Pause</span>
+            </button>
+          </header>
+          <div class="viewer-stage animation-stage">
+            <canvas class="rig-canvas" aria-label="Interactive TailorRig animation"></canvas>
+            <div class="viewer-status" role="status">Loading animation…</div>
+          </div>
+          <div class="viewer-controls" aria-label="TailorRig animation display modes">
+            <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
+            <span class="bone-mode-buttons"></span>
+            <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
+          </div>
+          <p class="model-instructions">
+            <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
+            Drag to rotate · Scroll or pinch to zoom · Animation loops automatically
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
 <section class="section bibtex-section" id="BibTeX" aria-labelledby="bibtex-title">
     <div class="container is-max-desktop content">
       <h2 class="title is-3" id="bibtex-title">BibTeX</h2>
       <p class="bibtex-note">Placeholder citation. The final entry will be updated after publication.</p>
       <pre><code>@inproceedings{chen2026tailorrig,
   title     = {TailorRig: Controllable and Structured Auxiliary Skeleton Generation for Garment-Aware Rigging},
-  author    = {Chen, Yajing and Chen, Xin and Lu, Saidan and Chen, Weikai and Yuan, Yeqi and Hu, Changyu and Zeng, Cheng and Wang, Xin},
+  author    = {Chen, Yajing and Chen, Xin and Lu, Saidan and Yuan, Yeqi and Chen, Weikai and Hu, Changyu and Zeng, Cheng and Wang, Xin},
   booktitle = {SIGGRAPH Asia 2026 Conference Papers},
   year      = {2026},
   note      = {To appear}
