@@ -290,6 +290,70 @@ body {
   line-height: 1.72;
 }
 
+.method-copy {
+  color: #353535;
+  font-size: 1.05rem;
+  line-height: 1.72;
+  margin: 2rem auto 1.5rem;
+  max-width: 920px;
+}
+
+.method-figure {
+  margin: 0;
+}
+
+.method-figure img {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.pipeline-figure {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(28, 39, 55, 0.09);
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 920px;
+  overflow: hidden;
+}
+
+.pipeline-figure figcaption {
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+  padding: 0.8rem 1.1rem;
+  text-align: center;
+}
+
+.dataset-overview {
+  margin-top: 1.25rem;
+}
+
+.dataset-figure {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 10px 26px rgba(28, 39, 55, 0.08);
+  margin: 1.5rem auto 0;
+  max-width: 900px;
+  overflow: hidden;
+}
+
+.dataset-copy {
+  color: #353535;
+  font-size: 1rem;
+  line-height: 1.7;
+  margin: 0 auto;
+  max-width: 920px;
+}
+
+.dataset-copy p:last-child {
+  margin-bottom: 0;
+}
+
 .bibtex-section {
   background: var(--surface);
   border-top: 1px solid var(--border);
@@ -354,6 +418,10 @@ body {
 
   .animation-stage {
     height: 460px;
+  }
+
+  .dataset-copy {
+    max-width: 540px;
   }
 }
 

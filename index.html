@@ -116,7 +116,7 @@
   </section>
 
   <section class="section" aria-labelledby="abstract-title">
-    <div class="container is-max-desktop">
+    <div class="container is-widescreen">
       <div class="columns is-centered has-text-centered">
         <div class="column is-four-fifths">
           <h2 class="title is-3" id="abstract-title">Abstract</h2>
@@ -133,6 +133,37 @@
           </div>
         </div>
       </div>
+
+      <div class="dataset-overview">
+        <div class="dataset-copy content has-text-justified">
+          <p>
+            <strong>Human-Mix</strong> provides the data foundation for training and evaluating garment-aware rigging. It contains <strong>38,088</strong> rigged humanoid characters annotated with our 21-class semantic taxonomy; 7,824 include at least one of ten auxiliary categories spanning hair, skirts, accessories, sleeves, capes, and more.
+          </p>
+        </div>
+        <figure class="method-figure dataset-figure">
+          <img
+            src="./source/figure/dataset_hist.png"
+            alt="Distribution of ten auxiliary bone categories in the Human-Mix dataset"
+            width="2100"
+            height="1034"
+            loading="lazy">
+        </figure>
+      </div>
+
+      <p class="method-copy has-text-justified">
+        Built on this data, <span class="project-name">TailorRig</span> takes a character mesh, an artist-specified body template, and optional auxiliary labels as input. It aligns the body skeleton, generates only the requested garment-aware auxiliary chains, and predicts skinning weights from chains to individual bones to reduce interference between nearby but semantically unrelated parts.
+      </p>
+
+      <figure class="method-figure pipeline-figure">
+        <img
+          src="./source/figure/pipeline.png"
+          alt="TailorRig pipeline from a mesh, body template, and auxiliary labels through controllable skeleton generation and hierarchical chain-to-bone skinning"
+          width="4124"
+          height="1278">
+        <figcaption>
+          The TailorRig pipeline combines controllable body-to-auxiliary skeleton generation with hierarchical chain-to-bone skinning.
+        </figcaption>
+      </figure>
     </div>
   </section>
 
