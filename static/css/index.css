@@ -195,34 +195,6 @@ body {
   height: 480px;
 }
 
-.animation-toggle {
-  align-items: center;
-  background: #f5f7fa;
-  border: 1px solid #cfd5de;
-  border-radius: 999px;
-  color: #3f4855;
-  cursor: pointer;
-  display: inline-flex;
-  flex: 0 0 auto;
-  font-family: "Google Sans", sans-serif;
-  font-size: 0.72rem;
-  font-weight: 700;
-  gap: 0.36rem;
-  line-height: 1;
-  padding: 0.4rem 0.62rem;
-}
-
-.animation-toggle:hover:not(:disabled),
-.animation-toggle:focus-visible {
-  background: #edf1f6;
-  border-color: #7f8a98;
-}
-
-.animation-toggle:disabled {
-  cursor: wait;
-  opacity: 0.5;
-}
-
 .rig-canvas {
   display: block;
   height: 100%;

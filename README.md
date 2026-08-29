@@ -25,7 +25,8 @@ Then open [http://localhost:8000](http://localhost:8000).
 - Paper, Appendix, Code, Data, and Model link placeholders plus an in-page Video link
 - Six interactive GLB previews in a desktop 3 × 2 grid
 - Mesh, semantic skeleton groups, and full-body weight-color modes
-- Two looping animation previews loaded from `source/anim/`, with play/pause and the same mesh, semantic skeleton, and weight modes
+- Automatic `Tex` mode for GLB files that contain one or more texture maps
+- Two continuously looping animation previews loaded from `source/anim/`, with the same mesh, semantic skeleton, and weight modes
 - Bounding-box camera fitting that accounts for the viewer aspect ratio
 - Crease-aware normal smoothing and shadow-bias correction for split-normal GLB exports
 - Abstract
@@ -52,6 +53,7 @@ Each card starts in Mesh mode:
 - Coincident split vertices are smoothed at runtime when their exported normals fall within the crease threshold, which reduces faceted or rippled shading while preserving intentional hard edges.
 - The initial camera distance is calculated from all eight bounding-box corners, the camera field of view, and the live canvas aspect ratio so each character starts fully framed.
 - Semantic bone buttons are generated from bone names after the GLB loads.
+- A `Tex` button is generated immediately after `Mesh` only when the loaded GLB's original material references a texture. Texture-less models do not show the button.
 - Bone-name matching is case-insensitive substring matching.
 - Bones that match no semantic keyword are grouped under Body.
 - Bone groups are overlaid on the original Mesh as sphere joints and cylinder segments. Each semantic group uses one fixed color.
@@ -66,7 +68,7 @@ const BONE_KEYWORDS = ["skirt", "hair", "sleeve", "cape", "accessory"];
 
 To replace or extend the examples, update the `data-model` paths in `index.html`.
 
-Animation cards use the same `RigViewer` implementation as the static cards. Add `data-animation="true"` to the card, point `data-model` to a GLB containing an animation clip, and include an `.animation-toggle` button when play/pause control is needed.
+Animation cards use the same `RigViewer` implementation as the static cards. Add `data-animation="true"` to the card and point `data-model` to a GLB containing an animation clip; the first clip plays continuously in a loop.
 
 ## Inline video
 
