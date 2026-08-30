@@ -109,6 +109,65 @@ body {
   min-width: 7.3rem;
 }
 
+.demo-section {
+  padding-bottom: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+.demo-frame {
+  aspect-ratio: 16 / 9;
+  background: #111923;
+  border: 1px solid #273447;
+  border-radius: 14px;
+  box-shadow: 0 12px 32px rgba(28, 39, 55, 0.16);
+  margin: 0 auto;
+  max-width: 920px;
+  overflow: hidden;
+  position: relative;
+}
+
+.demo-cover {
+  align-items: center;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(50, 115, 220, 0.22), transparent 35%),
+    linear-gradient(145deg, #1c2736 0%, #0d141d 100%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  justify-content: center;
+  position: absolute;
+}
+
+.demo-cover-icon {
+  align-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.78);
+  border-radius: 50%;
+  display: flex;
+  font-size: 1.25rem;
+  height: 4.25rem;
+  justify-content: center;
+  margin-bottom: 1.1rem;
+  padding-left: 0.2rem;
+  width: 4.25rem;
+}
+
+.demo-cover-title {
+  font-family: "Google Sans", sans-serif;
+  font-size: 2.6rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  margin: 0;
+}
+
+.demo-cover-note {
+  color: rgba(255, 255, 255, 0.68);
+  font-family: "Google Sans", sans-serif;
+  font-size: 0.95rem;
+  margin: 0.65rem 0 0;
+}
+
 .model-section {
   padding-top: 1.5rem;
 }
