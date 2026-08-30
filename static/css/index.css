@@ -21,6 +21,7 @@ body {
 }
 
 .publication-title,
+.publication-venue,
 .publication-authors,
 .publication-affiliations,
 .contribution-note {
@@ -29,7 +30,7 @@ body {
 
 .publication-title {
   line-height: 1.12;
-  margin: 1rem auto 1.75rem;
+  margin: 0 auto 1rem;
   max-width: 1050px;
 }
 
@@ -40,12 +41,12 @@ body {
   letter-spacing: 0.015em;
 }
 
-.publication-logo {
-  display: block;
-  height: auto;
+.publication-venue {
+  color: #414141;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: 0.035em;
   margin: 0 auto 1.15rem;
-  max-width: min(330px, 76vw);
-  width: 100%;
 }
 
 .publication-authors {
