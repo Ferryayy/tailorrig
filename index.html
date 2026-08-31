@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="./static/css/bulma.min.css">
-  <link rel="stylesheet" href="./static/css/index.css?v=20260830-8">
+  <link rel="stylesheet" href="./static/css/index.css?v=20260831-2">
   <script type="importmap">
     {
       "imports": {
@@ -111,7 +111,7 @@
     </div>
   </section>
 
-  <section class="section" aria-labelledby="abstract-title">
+  <section class="section abstract-section" aria-labelledby="abstract-title">
     <div class="container is-widescreen">
       <div class="columns is-centered has-text-centered">
         <div class="column is-four-fifths">
@@ -130,36 +130,113 @@
         </div>
       </div>
 
-      <div class="dataset-overview">
-        <div class="dataset-copy content has-text-justified">
-          <p>
-            <strong>Human-Mix</strong> provides the data foundation for training and evaluating garment-aware rigging. It contains <strong>38,088</strong> rigged humanoid characters annotated with our 21-class semantic taxonomy; 7,824 include at least one of ten auxiliary categories spanning hair, skirts, accessories, sleeves, capes, and more.
-          </p>
-        </div>
-        <figure class="method-figure dataset-figure">
-          <img
-            src="./source/figure/dataset_hist.png"
-            alt="Distribution of ten auxiliary bone categories in the Human-Mix dataset"
-            width="2100"
-            height="1034"
-            loading="lazy">
-        </figure>
-      </div>
+    </div>
+  </section>
 
-      <p class="method-copy has-text-justified">
-        Built on this data, <span class="project-name">TailorRig</span> takes a character mesh, an artist-specified body template, and optional auxiliary labels as input. It aligns the body skeleton, generates only the requested garment-aware auxiliary chains, and predicts skinning weights from chains to individual bones to reduce interference between nearby but semantically unrelated parts.
+  <section class="section animation-section" aria-labelledby="animation-title">
+    <div class="container is-widescreen">
+      <h2 class="title is-3 has-text-centered" id="animation-title">Animation Comparison</h2>
+      <p class="section-lead has-text-centered">
+        Ground truth and four rigging results are driven by the same running motion for a direct comparison.
       </p>
+      <div class="animation-strip" aria-label="Scrollable animation comparison">
+        <div class="model-grid animation-grid">
+          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/gt.glb" data-animation="true">
+            <header class="model-card-header">
+              <h3>Ground Truth</h3>
+            </header>
+            <div class="viewer-stage animation-stage">
+              <canvas class="rig-canvas" aria-label="Interactive ground-truth animation"></canvas>
+              <div class="viewer-status" role="status">Loading animation…</div>
+            </div>
+            <div class="viewer-controls" aria-label="Ground-truth animation display modes">
+              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
+              <span class="bone-mode-buttons"></span>
+              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
+            </div>
+            <p class="model-instructions">
+              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
+              Drag · Scroll to zoom
+            </p>
+          </article>
 
-      <figure class="method-figure pipeline-figure">
-        <img
-          src="./source/figure/pipeline.png"
-          alt="TailorRig pipeline from a mesh, body template, and auxiliary labels through controllable skeleton generation and hierarchical chain-to-bone skinning"
-          width="4124"
-          height="1278">
-        <figcaption>
-          The TailorRig pipeline combines controllable body-to-auxiliary skeleton generation with hierarchical chain-to-bone skinning.
-        </figcaption>
-      </figure>
+          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/ours.glb" data-animation="true">
+            <header class="model-card-header">
+              <h3>Ours</h3>
+            </header>
+            <div class="viewer-stage animation-stage">
+              <canvas class="rig-canvas" aria-label="Interactive TailorRig animation"></canvas>
+              <div class="viewer-status" role="status">Loading animation…</div>
+            </div>
+            <div class="viewer-controls" aria-label="TailorRig animation display modes">
+              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
+              <span class="bone-mode-buttons"></span>
+              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
+            </div>
+            <p class="model-instructions">
+              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
+              Drag · Scroll to zoom
+            </p>
+          </article>
+
+          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/MIA.glb" data-animation="true">
+            <header class="model-card-header">
+              <h3>MIA</h3>
+            </header>
+            <div class="viewer-stage animation-stage">
+              <canvas class="rig-canvas" aria-label="Interactive MIA animation"></canvas>
+              <div class="viewer-status" role="status">Loading animation…</div>
+            </div>
+            <div class="viewer-controls" aria-label="MIA animation display modes">
+              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
+              <span class="bone-mode-buttons"></span>
+              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
+            </div>
+            <p class="model-instructions">
+              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
+              Drag · Scroll to zoom
+            </p>
+          </article>
+
+          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/Unirig.glb" data-animation="true">
+            <header class="model-card-header">
+              <h3>UniRig</h3>
+            </header>
+            <div class="viewer-stage animation-stage">
+              <canvas class="rig-canvas" aria-label="Interactive UniRig animation"></canvas>
+              <div class="viewer-status" role="status">Loading animation…</div>
+            </div>
+            <div class="viewer-controls" aria-label="UniRig animation display modes">
+              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
+              <span class="bone-mode-buttons"></span>
+              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
+            </div>
+            <p class="model-instructions">
+              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
+              Drag · Scroll to zoom
+            </p>
+          </article>
+
+          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/Pinocchio.glb" data-animation="true">
+            <header class="model-card-header">
+              <h3>Pinocchio</h3>
+            </header>
+            <div class="viewer-stage animation-stage">
+              <canvas class="rig-canvas" aria-label="Interactive Pinocchio animation"></canvas>
+              <div class="viewer-status" role="status">Loading animation…</div>
+            </div>
+            <div class="viewer-controls" aria-label="Pinocchio animation display modes">
+              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
+              <span class="bone-mode-buttons"></span>
+              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
+            </div>
+            <p class="model-instructions">
+              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
+              Drag · Scroll to zoom
+            </p>
+          </article>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -279,109 +356,37 @@
     </div>
   </section>
 
-  <section class="section animation-section" aria-labelledby="animation-title">
+  <section class="section method-section" aria-labelledby="method-title">
     <div class="container is-widescreen">
-      <h2 class="title is-3 has-text-centered" id="animation-title">Animation Comparison</h2>
-      <p class="section-lead has-text-centered">
-        Ground truth and four rigging results are driven by the same running motion for a direct comparison.
-      </p>
-      <div class="animation-strip" aria-label="Scrollable animation comparison">
-        <div class="model-grid animation-grid">
-          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/gt.glb" data-animation="true">
-            <header class="model-card-header">
-              <h3>Ground Truth</h3>
-            </header>
-            <div class="viewer-stage animation-stage">
-              <canvas class="rig-canvas" aria-label="Interactive ground-truth animation"></canvas>
-              <div class="viewer-status" role="status">Loading animation…</div>
-            </div>
-            <div class="viewer-controls" aria-label="Ground-truth animation display modes">
-              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
-              <span class="bone-mode-buttons"></span>
-              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
-            </div>
-            <p class="model-instructions">
-              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
-              Drag · Scroll to zoom
-            </p>
-          </article>
+      <h2 class="title is-3 has-text-centered" id="method-title">Method</h2>
 
-          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/ours.glb" data-animation="true">
-            <header class="model-card-header">
-              <h3>Ours</h3>
-            </header>
-            <div class="viewer-stage animation-stage">
-              <canvas class="rig-canvas" aria-label="Interactive TailorRig animation"></canvas>
-              <div class="viewer-status" role="status">Loading animation…</div>
-            </div>
-            <div class="viewer-controls" aria-label="TailorRig animation display modes">
-              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
-              <span class="bone-mode-buttons"></span>
-              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
-            </div>
-            <p class="model-instructions">
-              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
-              Drag · Scroll to zoom
-            </p>
-          </article>
+      <figure class="method-figure pipeline-figure">
+        <img
+          src="./source/figure/pipeline.png"
+          alt="TailorRig pipeline from a mesh, body template, and auxiliary labels through controllable skeleton generation and hierarchical chain-to-bone skinning"
+          width="4124"
+          height="1278">
+        <figcaption>
+          The TailorRig pipeline combines controllable body-to-auxiliary skeleton generation with hierarchical chain-to-bone skinning.
+        </figcaption>
+      </figure>
 
-          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/MIA.glb" data-animation="true">
-            <header class="model-card-header">
-              <h3>MIA</h3>
-            </header>
-            <div class="viewer-stage animation-stage">
-              <canvas class="rig-canvas" aria-label="Interactive MIA animation"></canvas>
-              <div class="viewer-status" role="status">Loading animation…</div>
-            </div>
-            <div class="viewer-controls" aria-label="MIA animation display modes">
-              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
-              <span class="bone-mode-buttons"></span>
-              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
-            </div>
-            <p class="model-instructions">
-              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
-              Drag · Scroll to zoom
-            </p>
-          </article>
+      <div class="content has-text-justified method-copy">
+        <p>
+          <span class="project-name">TailorRig</span> takes a character mesh, an artist-specified body skeleton template, and a selected set of auxiliary categories as input, and produces a complete skeleton together with skinning weights. The body template provides the first axis of control. It is canonicalized into a standard pose and encoded while retaining its original topology, after which a topology-aware mesh-bone fusion decoder aligns its joints to the target geometry. Because the connectivity of the template is preserved throughout this process, the resulting body rig remains compatible with the artist's intended skeletal convention and can directly reuse existing animation assets.
+        </p>
 
-          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/Unirig.glb" data-animation="true">
-            <header class="model-card-header">
-              <h3>UniRig</h3>
-            </header>
-            <div class="viewer-stage animation-stage">
-              <canvas class="rig-canvas" aria-label="Interactive UniRig animation"></canvas>
-              <div class="viewer-status" role="status">Loading animation…</div>
-            </div>
-            <div class="viewer-controls" aria-label="UniRig animation display modes">
-              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
-              <span class="bone-mode-buttons"></span>
-              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
-            </div>
-            <p class="model-instructions">
-              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
-              Drag · Scroll to zoom
-            </p>
-          </article>
+        <p>
+          Auxiliary category labels provide the second axis of control. Rather than treating a label such as skirt, hair, sleeve, or accessory as a global tag, TailorRig grounds it in the current character through reciprocal attention between mesh features and the aligned body skeleton. The resulting geometry-aware label representation conditions a structured autoregressive decoder, which serializes and predicts each auxiliary skeleton tree as an ordered sequence. This formulation allows artists to request any subset of supported categories while generating only the corresponding auxiliary chains and attaching them consistently to the body rig.
+        </p>
 
-          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/Pinocchio.glb" data-animation="true">
-            <header class="model-card-header">
-              <h3>Pinocchio</h3>
-            </header>
-            <div class="viewer-stage animation-stage">
-              <canvas class="rig-canvas" aria-label="Interactive Pinocchio animation"></canvas>
-              <div class="viewer-status" role="status">Loading animation…</div>
-            </div>
-            <div class="viewer-controls" aria-label="Pinocchio animation display modes">
-              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
-              <span class="bone-mode-buttons"></span>
-              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
-            </div>
-            <p class="model-instructions">
-              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
-              Drag · Scroll to zoom
-            </p>
-          </article>
-        </div>
+        <p>
+          After skeleton generation, TailorRig predicts skinning weights with a hierarchical chain-to-bone formulation. The full skeleton is first partitioned into kinematic chains, and each vertex is softly associated with the most relevant chains using learned feature similarity together with geodesic distance cues. Bone-level weights are then refined within this structural context, with each bone prediction conditioned on the weight of its parent chain. This coarse-to-fine organization narrows competition to structurally related bones and reduces weight bleeding between spatially close but semantically unrelated regions, such as arms, garments, and accessories.
+        </p>
+
+        <p>
+          Training and evaluation use <strong>Human-Mix</strong>, which contains 38,088 rigged humanoid characters annotated with a 21-class taxonomy covering 11 body classes and 10 auxiliary categories. Among them, 7,824 characters contain at least one auxiliary category. These annotations provide the semantic and structural supervision needed for body alignment, auxiliary skeleton generation, and hierarchical skinning across diverse character and garment configurations.
+        </p>
       </div>
     </div>
   </section>
