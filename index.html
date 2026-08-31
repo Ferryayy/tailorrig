@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="./static/css/bulma.min.css">
-  <link rel="stylesheet" href="./static/css/index.css?v=20260831-2">
+  <link rel="stylesheet" href="./static/css/index.css?v=20260831-3">
   <script type="importmap">
     {
       "imports": {
@@ -19,6 +19,7 @@
     }
   </script>
   <script type="module" src="./static/js/viewer.js?v=20260830-4"></script>
+  <script src="./static/js/reveal.js?v=20260831-1" defer></script>
 </head>
 <body>
 
@@ -101,7 +102,7 @@
   <section class="section demo-section" id="demo" aria-label="Demo video placeholder">
     <div class="container is-max-desktop">
       <!-- Replace this placeholder with the final video player when the demo is ready. -->
-      <div class="demo-frame" role="img" aria-label="Demo video coming soon">
+      <div class="demo-frame" role="img" aria-label="Demo video coming soon" data-reveal>
         <div class="demo-cover">
           <span class="demo-cover-icon" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
           <p class="demo-cover-title">Demo</p>
@@ -115,8 +116,8 @@
     <div class="container is-widescreen">
       <div class="columns is-centered has-text-centered">
         <div class="column is-four-fifths">
-          <h2 class="title is-3" id="abstract-title">Abstract</h2>
-          <div class="content has-text-justified abstract-copy">
+          <h2 class="title is-3" id="abstract-title" data-reveal>Abstract</h2>
+          <div class="content has-text-justified abstract-copy" data-reveal data-reveal-delay="80">
             <p>
               Humanoid rigging for modern characters with complex garments remains challenging due to the need for dense auxiliary skeletons and precise skinning control. Existing automatic methods primarily recover rigs from geometry, providing limited artist control over auxiliary articulation and often lacking explicit semantic or kinematic-chain structure for dense garment bones, leading to instability and weight bleeding.
             </p>
@@ -135,11 +136,11 @@
 
   <section class="section animation-section" aria-labelledby="animation-title">
     <div class="container is-widescreen">
-      <h2 class="title is-3 has-text-centered" id="animation-title">Animation Comparison</h2>
-      <p class="section-lead has-text-centered">
+      <h2 class="title is-3 has-text-centered" id="animation-title" data-reveal>Animation Comparison</h2>
+      <p class="section-lead has-text-centered" data-reveal data-reveal-delay="70">
         Ground truth and four rigging results are driven by the same running motion for a direct comparison.
       </p>
-      <div class="animation-strip" aria-label="Scrollable animation comparison">
+      <div class="animation-strip" aria-label="Scrollable animation comparison" data-reveal data-reveal-delay="140">
         <div class="model-grid animation-grid">
           <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/gt.glb" data-animation="true">
             <header class="model-card-header">
@@ -242,8 +243,8 @@
 
   <section class="section model-section" aria-labelledby="model-title">
     <div class="container is-widescreen">
-      <h2 class="title is-3 has-text-centered" id="model-title">Interactive 3D Results</h2>
-      <div class="model-grid">
+      <h2 class="title is-3 has-text-centered" id="model-title" data-reveal>Interactive 3D Results</h2>
+      <div class="model-grid" data-reveal data-reveal-delay="90">
         <article class="model-card rig-viewer" data-model="./source/model1.glb">
           <header class="model-card-header">
             <h3>Result 01</h3>
@@ -358,9 +359,9 @@
 
   <section class="section method-section" aria-labelledby="method-title">
     <div class="container is-widescreen">
-      <h2 class="title is-3 has-text-centered" id="method-title">Method</h2>
+      <h2 class="title is-3 has-text-centered" id="method-title" data-reveal>Method</h2>
 
-      <figure class="method-figure pipeline-figure">
+      <figure class="method-figure pipeline-figure" data-reveal data-reveal-delay="70">
         <img
           src="./source/figure/pipeline.png"
           alt="TailorRig pipeline from a mesh, body template, and auxiliary labels through controllable skeleton generation and hierarchical chain-to-bone skinning"
@@ -371,7 +372,7 @@
         </figcaption>
       </figure>
 
-      <div class="content has-text-justified method-copy">
+      <div class="content has-text-justified method-copy" data-reveal data-reveal-delay="120">
         <p>
           <span class="project-name">TailorRig</span> takes a character mesh, an artist-specified body skeleton template, and a selected set of auxiliary categories as input, and produces a complete skeleton together with skinning weights. The body template provides the first axis of control. It is canonicalized into a standard pose and encoded while retaining its original topology, after which a topology-aware mesh-bone fusion decoder aligns its joints to the target geometry. Because the connectivity of the template is preserved throughout this process, the resulting body rig remains compatible with the artist's intended skeletal convention and can directly reuse existing animation assets.
         </p>
@@ -393,9 +394,9 @@
 
 <section class="section bibtex-section" id="BibTeX" aria-labelledby="bibtex-title">
     <div class="container is-max-desktop content">
-      <h2 class="title is-3" id="bibtex-title">BibTeX</h2>
-      <p class="bibtex-note">Placeholder citation. The final entry will be updated after publication.</p>
-      <pre><code>@inproceedings{chen2026tailorrig,
+      <h2 class="title is-3" id="bibtex-title" data-reveal>BibTeX</h2>
+      <p class="bibtex-note" data-reveal data-reveal-delay="60">Placeholder citation. The final entry will be updated after publication.</p>
+      <pre data-reveal data-reveal-delay="110"><code>@inproceedings{chen2026tailorrig,
   title     = {TailorRig: Controllable and Structured Auxiliary Skeleton Generation for Garment-Aware Rigging},
   author    = {Chen, Yajing and Chen, Xin and Lu, Saidan and Yuan, Yeqi and Chen, Weikai and Hu, Changyu and Zeng, Cheng and Wang, Xin},
   booktitle = {SIGGRAPH Asia 2026 Conference Papers},
