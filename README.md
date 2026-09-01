@@ -26,7 +26,8 @@ Then open [http://localhost:8000](http://localhost:8000).
 - Six interactive GLB previews in a desktop 3 × 2 grid
 - Mesh, semantic skeleton groups, and full-body weight-color modes
 - Automatic `Tex` mode for GLB files that contain one or more texture maps
-- Two continuously looping animation previews loaded from `source/anim/`, with the same mesh, semantic skeleton, and weight modes
+- Five five-column animation comparison rows loaded from `source/anim/run_anim_texture_glb_gp/`, with an empty placeholder for the missing Fox/MIA output
+- Immediate animation-card placeholders with loading spinners, followed by viewport-aware GLB loading, two-file concurrency, and WebGL cleanup
 - Bounding-box camera fitting that accounts for the viewer aspect ratio
 - Crease-aware normal smoothing and shadow-bias correction for split-normal GLB exports
 - Abstract
@@ -68,7 +69,7 @@ const BONE_KEYWORDS = ["skirt", "hair", "sleeve", "cape", "accessory"];
 
 To replace or extend the examples, update the `data-model` paths in `index.html`.
 
-Animation cards use the same `RigViewer` implementation as the static cards. Add `data-animation="true"` to the card and point `data-model` to a GLB containing an animation clip; the first clip plays continuously in a loop.
+Animation cards use the same `RigViewer` implementation as the static cards. The five method columns and character-motion rows are defined in `static/js/animation-grid.js`, which renders the complete comparison grid before Three.js or any GLB finishes loading. `static/js/viewer.js` then loads at most two visible models at a time; the first clip in each GLB plays continuously in a loop. Missing outputs remain as empty cells so every comparison row stays aligned.
 
 ## Inline video
 

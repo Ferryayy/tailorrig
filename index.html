@@ -9,7 +9,7 @@
   <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="./static/css/bulma.min.css">
-  <link rel="stylesheet" href="./static/css/index.css?v=20260831-3">
+  <link rel="stylesheet" href="./static/css/index.css?v=20260901-2">
   <script type="importmap">
     {
       "imports": {
@@ -18,7 +18,7 @@
       }
     }
   </script>
-  <script type="module" src="./static/js/viewer.js?v=20260830-4"></script>
+  <script type="module" src="./static/js/viewer.js?v=20260901-2"></script>
   <script src="./static/js/reveal.js?v=20260831-1" defer></script>
 </head>
 <body>
@@ -138,105 +138,11 @@
     <div class="container is-widescreen">
       <h2 class="title is-3 has-text-centered" id="animation-title" data-reveal>Animation Comparison</h2>
       <p class="section-lead has-text-centered" data-reveal data-reveal-delay="70">
-        Ground truth and four rigging results are driven by the same running motion for a direct comparison.
+        Ground truth and four rigging results are driven by the same motion for a direct comparison.
       </p>
       <div class="animation-strip" aria-label="Scrollable animation comparison" data-reveal data-reveal-delay="140">
-        <div class="model-grid animation-grid">
-          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/gt.glb" data-animation="true">
-            <header class="model-card-header">
-              <h3>Ground Truth</h3>
-            </header>
-            <div class="viewer-stage animation-stage">
-              <canvas class="rig-canvas" aria-label="Interactive ground-truth animation"></canvas>
-              <div class="viewer-status" role="status">Loading animation…</div>
-            </div>
-            <div class="viewer-controls" aria-label="Ground-truth animation display modes">
-              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
-              <span class="bone-mode-buttons"></span>
-              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
-            </div>
-            <p class="model-instructions">
-              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
-              Drag · Scroll to zoom
-            </p>
-          </article>
-
-          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/ours.glb" data-animation="true">
-            <header class="model-card-header">
-              <h3>Ours</h3>
-            </header>
-            <div class="viewer-stage animation-stage">
-              <canvas class="rig-canvas" aria-label="Interactive TailorRig animation"></canvas>
-              <div class="viewer-status" role="status">Loading animation…</div>
-            </div>
-            <div class="viewer-controls" aria-label="TailorRig animation display modes">
-              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
-              <span class="bone-mode-buttons"></span>
-              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
-            </div>
-            <p class="model-instructions">
-              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
-              Drag · Scroll to zoom
-            </p>
-          </article>
-
-          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/MIA.glb" data-animation="true">
-            <header class="model-card-header">
-              <h3>MIA</h3>
-            </header>
-            <div class="viewer-stage animation-stage">
-              <canvas class="rig-canvas" aria-label="Interactive MIA animation"></canvas>
-              <div class="viewer-status" role="status">Loading animation…</div>
-            </div>
-            <div class="viewer-controls" aria-label="MIA animation display modes">
-              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
-              <span class="bone-mode-buttons"></span>
-              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
-            </div>
-            <p class="model-instructions">
-              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
-              Drag · Scroll to zoom
-            </p>
-          </article>
-
-          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/Unirig.glb" data-animation="true">
-            <header class="model-card-header">
-              <h3>UniRig</h3>
-            </header>
-            <div class="viewer-stage animation-stage">
-              <canvas class="rig-canvas" aria-label="Interactive UniRig animation"></canvas>
-              <div class="viewer-status" role="status">Loading animation…</div>
-            </div>
-            <div class="viewer-controls" aria-label="UniRig animation display modes">
-              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
-              <span class="bone-mode-buttons"></span>
-              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
-            </div>
-            <p class="model-instructions">
-              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
-              Drag · Scroll to zoom
-            </p>
-          </article>
-
-          <article class="model-card rig-viewer animation-card" data-model="./source/anim/Run/Arissa/Pinocchio.glb" data-animation="true">
-            <header class="model-card-header">
-              <h3>Pinocchio</h3>
-            </header>
-            <div class="viewer-stage animation-stage">
-              <canvas class="rig-canvas" aria-label="Interactive Pinocchio animation"></canvas>
-              <div class="viewer-status" role="status">Loading animation…</div>
-            </div>
-            <div class="viewer-controls" aria-label="Pinocchio animation display modes">
-              <button class="viewer-mode is-active" type="button" data-mode="mesh" aria-pressed="true" disabled>Mesh</button>
-              <span class="bone-mode-buttons"></span>
-              <button class="viewer-mode" type="button" data-mode="weights" aria-pressed="false" disabled>Weights</button>
-            </div>
-            <p class="model-instructions">
-              <span aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span>
-              Drag · Scroll to zoom
-            </p>
-          </article>
-        </div>
+        <div class="model-grid animation-grid" id="animation-grid"></div>
+        <script src="./static/js/animation-grid.js?v=20260901-1"></script>
       </div>
     </div>
   </section>

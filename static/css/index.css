@@ -263,6 +263,20 @@ body {
   min-width: 1050px;
 }
 
+.animation-card--empty {
+  box-shadow: none;
+}
+
+.animation-card--empty .animation-stage {
+  background: #f7f8fa;
+}
+
+.animation-card.is-loading .animation-stage {
+  background:
+    radial-gradient(circle at 50% 43%, rgba(50, 115, 220, 0.08), transparent 34%),
+    linear-gradient(145deg, #f8fafc 0%, #edf1f6 100%);
+}
+
 .animation-stage {
   height: 300px;
 }
@@ -313,11 +327,24 @@ body {
   align-items: center;
   color: var(--muted);
   display: flex;
+  flex-direction: column;
+  font-size: 0.78rem;
+  gap: 0.72rem;
   font-family: "Google Sans", sans-serif;
   inset: 0;
   justify-content: center;
   pointer-events: none;
   position: absolute;
+}
+
+.viewer-status::before {
+  animation: viewer-loading-spin 820ms linear infinite;
+  border: 3px solid rgba(50, 115, 220, 0.16);
+  border-radius: 50%;
+  border-top-color: var(--accent);
+  content: "";
+  height: 2rem;
+  width: 2rem;
 }
 
 .viewer-status[hidden] {
@@ -326,6 +353,22 @@ body {
 
 .viewer-status.is-error {
   color: #b42318;
+}
+
+.viewer-status.is-error::before {
+  display: none;
+}
+
+@keyframes viewer-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewer-status::before {
+    animation-duration: 1.8s;
+  }
 }
 
 .viewer-controls {

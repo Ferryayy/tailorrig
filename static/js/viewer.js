@@ -32,6 +32,66 @@ const JOINT_RADIUS = 0.027;
 const BONE_RADIUS = 0.012;
 const CYLINDER_UP_AXIS = new THREE.Vector3(0, 1, 0);
 const INITIAL_VIEW_DIRECTION = new THREE.Vector3(0.82, 0.24, 1.4).normalize();
+const VIEWER_RELEASE_DELAY = 500;
+const MAX_CONCURRENT_VIEWER_LOADS = 2;
+const viewerLoadQueue = [];
+let activeViewerLoads = 0;
+
+function processViewerLoadQueue() {
+  while (activeViewerLoads < MAX_CONCURRENT_VIEWER_LOADS && viewerLoadQueue.length > 0) {
+    const viewer = viewerLoadQueue.shift();
+    viewer.isQueued = false;
+
+    if (!viewer.isVisible || viewer.isInitialized || viewer.isLoading) {
+      continue;
+    }
+
+    activeViewerLoads += 1;
+    viewer.startLoading().finally(() => {
+      activeViewerLoads -= 1;
+      processViewerLoadQueue();
+    });
+  }
+}
+
+function queueViewerLoad(viewer) {
+  viewerLoadQueue.push(viewer);
+  processViewerLoadQueue();
+}
+
+function collectMaterialResources(material, materials, textures) {
+  materialList(material).forEach((entry) => {
+    if (!entry || materials.has(entry)) {
+      return;
+    }
+
+    materials.add(entry);
+    Object.values(entry).forEach((value) => {
+      if (value?.isTexture) {
+        textures.add(value);
+      }
+    });
+  });
+}
+
+function disposeObjectResources(root) {
+  const geometries = new Set();
+  const materials = new Set();
+  const textures = new Set();
+
+  root?.traverse((object) => {
+    if (object.geometry) {
+      geometries.add(object.geometry);
+    }
+    if (object.material) {
+      collectMaterialResources(object.material, materials, textures);
+    }
+  });
+
+  geometries.forEach((geometry) => geometry.dispose());
+  materials.forEach((material) => material.dispose());
+  textures.forEach((texture) => texture.dispose());
+}
 
 function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -231,19 +291,50 @@ class RigViewer {
     this.hasTextureMaterial = false;
     this.mixer = null;
     this.animationAction = null;
-    this.isVisible = true;
+    this.isVisible = false;
     this.hasUserFramedView = false;
     this.fittedBox = null;
     this.lastFrameTime = null;
+    this.isInitialized = false;
+    this.isLoading = false;
+    this.isQueued = false;
+    this.loadGeneration = 0;
+    this.releaseTimer = null;
+
+    this.setupControlEvents();
   }
 
-  async init() {
-    this.setupScene();
-    this.setupObservers();
-    this.setupControlEvents();
+  init() {
+    if (this.isInitialized || this.isLoading || this.isQueued) {
+      return;
+    }
+
+    this.isQueued = true;
+    queueViewerLoad(this);
+  }
+
+  async startLoading() {
+    if (!this.isVisible || this.isInitialized || this.isLoading) {
+      return;
+    }
+
+    this.isLoading = true;
+    const loadGeneration = ++this.loadGeneration;
+    this.status.hidden = false;
+    this.status.textContent = this.card.dataset.animation
+      ? "Loading animation…"
+      : "Loading 3D model…";
+    this.status.classList.remove("is-error");
 
     try {
+      this.setupScene();
+      this.setupObservers();
       const gltf = await loader.loadAsync(this.modelUrl);
+      if (loadGeneration !== this.loadGeneration) {
+        disposeObjectResources(gltf.scene);
+        return;
+      }
+
       this.model = gltf.scene;
       this.modelRoot = new THREE.Group();
       this.modelRoot.add(this.model);
@@ -256,10 +347,24 @@ class RigViewer {
       this.buildBoneButtons();
       this.enableControls();
       this.status.hidden = true;
+      this.card.classList.remove("is-loading");
+      this.card.setAttribute("aria-busy", "false");
+      this.isInitialized = true;
     } catch (error) {
+      if (loadGeneration !== this.loadGeneration) {
+        return;
+      }
+
       console.error(`Unable to load ${this.modelUrl}`, error);
       this.status.textContent = "Unable to load this model.";
       this.status.classList.add("is-error");
+      this.card.classList.remove("is-loading");
+      this.card.setAttribute("aria-busy", "false");
+      this.isInitialized = true;
+    } finally {
+      if (loadGeneration === this.loadGeneration) {
+        this.isLoading = false;
+      }
     }
   }
 
@@ -336,15 +441,114 @@ class RigViewer {
   setupObservers() {
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(this.stage);
-
-    this.visibilityObserver = new IntersectionObserver(
-      ([entry]) => {
-        this.isVisible = entry.isIntersecting;
-      },
-      { rootMargin: "180px" },
-    );
-    this.visibilityObserver.observe(this.card);
     this.resize();
+  }
+
+  setVisible(isVisible) {
+    this.isVisible = isVisible;
+
+    if (isVisible) {
+      window.clearTimeout(this.releaseTimer);
+      this.releaseTimer = null;
+      this.init();
+      return;
+    }
+
+    if (!this.isInitialized && !this.isLoading) {
+      return;
+    }
+
+    window.clearTimeout(this.releaseTimer);
+    this.releaseTimer = window.setTimeout(() => this.destroy(), VIEWER_RELEASE_DELAY);
+  }
+
+  destroy() {
+    window.clearTimeout(this.releaseTimer);
+    this.releaseTimer = null;
+    this.loadGeneration += 1;
+    this.isLoading = false;
+    this.isQueued = false;
+    this.isInitialized = false;
+    this.isVisible = false;
+
+    this.renderer?.setAnimationLoop(null);
+    this.resizeObserver?.disconnect();
+    this.orbitControls?.dispose();
+    this.clearSkeletonVisual();
+
+    const geometries = new Set();
+    const materials = new Set();
+    const textures = new Set();
+    this.meshRecords.forEach((record) => {
+      [record.displayGeometry, record.weightGeometry].forEach((geometry) => {
+        if (geometry) {
+          geometries.add(geometry);
+        }
+      });
+      [record.displayMaterial, record.textureMaterial, record.weightMaterial].forEach((material) => {
+        if (material) {
+          collectMaterialResources(material, materials, textures);
+        }
+      });
+    });
+    if (this.ground) {
+      geometries.add(this.ground.geometry);
+      collectMaterialResources(this.ground.material, materials, textures);
+    }
+
+    geometries.forEach((geometry) => geometry.dispose());
+    materials.forEach((material) => material.dispose());
+    textures.forEach((texture) => texture.dispose());
+
+    if (this.renderer) {
+      this.renderer.dispose();
+      this.renderer.forceContextLoss();
+    }
+
+    this.mixer?.stopAllAction();
+    if (this.mixer && this.model) {
+      this.mixer.uncacheRoot(this.model);
+    }
+
+    this.controlsElement.querySelector('[data-mode="texture"]')?.remove();
+    this.boneButtonHost.replaceChildren();
+    this.controlsElement.querySelectorAll(".viewer-mode").forEach((button) => {
+      button.disabled = true;
+      const isMesh = button.dataset.mode === "mesh";
+      button.classList.toggle("is-active", isMesh);
+      button.setAttribute("aria-pressed", String(isMesh));
+    });
+
+    const replacementCanvas = this.canvas.cloneNode(false);
+    this.canvas.replaceWith(replacementCanvas);
+    this.canvas = replacementCanvas;
+    this.status.hidden = false;
+    this.status.textContent = this.card.dataset.animation
+      ? "Loading animation…"
+      : "Loading 3D model…";
+    this.status.classList.remove("is-error");
+    this.card.classList.add("is-loading");
+    this.card.setAttribute("aria-busy", "true");
+
+    this.mode = "mesh";
+    this.activeGroup = null;
+    this.model = null;
+    this.modelRoot = null;
+    this.ground = null;
+    this.skeletonVisual = null;
+    this.meshRecords = [];
+    this.boneRecords = [];
+    this.hasTextureMaterial = false;
+    this.mixer = null;
+    this.animationClip = null;
+    this.animationAction = null;
+    this.fittedBox = null;
+    this.lastFrameTime = null;
+    this.renderer = null;
+    this.scene = null;
+    this.camera = null;
+    this.orbitControls = null;
+    this.resizeObserver = null;
   }
 
   resize() {
@@ -388,9 +592,10 @@ class RigViewer {
       object.receiveShadow = true;
 
       const sourceMaterial = object.material;
+      const sourceGeometry = object.geometry;
       const textureMaterial = cloneMaterial(sourceMaterial);
       const hasTexture = materialHasTexture(sourceMaterial);
-      const displayGeometry = createSmoothedGeometry(object.geometry);
+      const displayGeometry = createSmoothedGeometry(sourceGeometry);
       const displayMaterial = createClayMaterial();
       const weightGeometry = object.isSkinnedMesh
         ? this.createWeightGeometry(object, displayGeometry)
@@ -410,6 +615,7 @@ class RigViewer {
 
       object.geometry = displayGeometry;
       object.material = displayMaterial;
+      sourceGeometry.dispose();
       this.hasTextureMaterial ||= hasTexture;
       this.meshRecords.push({
         mesh: object,
@@ -808,7 +1014,24 @@ class RigViewer {
   }
 }
 
+const viewerObserver = "IntersectionObserver" in window
+  ? new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        entry.target.rigViewer?.setVisible(entry.isIntersecting);
+      });
+    },
+    { rootMargin: "140px 160px" },
+  )
+  : null;
+
 document.querySelectorAll(".rig-viewer").forEach((card) => {
   const viewer = new RigViewer(card);
-  viewer.init();
+  card.rigViewer = viewer;
+
+  if (viewerObserver) {
+    viewerObserver.observe(card);
+  } else {
+    viewer.setVisible(true);
+  }
 });
