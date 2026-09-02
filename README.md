@@ -26,7 +26,7 @@ Then open [http://localhost:8000](http://localhost:8000).
 - Six interactive GLB previews in a desktop 3 × 2 grid
 - Mesh, semantic skeleton groups, and full-body weight-color modes
 - Automatic `Tex` mode for GLB files that contain one or more texture maps
-- Five five-column animation comparison rows loaded from `source/anim/run_anim_texture_glb_gp/`, with an empty placeholder for the missing Fox/MIA output
+- Four five-column animation comparison rows loaded from `source/anim/run_anim_texture_glb_gp/`, with an empty placeholder for the missing Fox/MIA output
 - Immediate animation-card placeholders with loading spinners, followed by viewport-aware GLB loading, two-file concurrency, and WebGL cleanup
 - Bounding-box camera fitting that accounts for the viewer aspect ratio
 - Crease-aware normal smoothing and shadow-bias correction for split-normal GLB exports

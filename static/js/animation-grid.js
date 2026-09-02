@@ -13,7 +13,6 @@
     { file: "514_WD.glb" },
     { file: "Arissa_TG_update.glb" },
     { file: "fox_TG.glb", missing: ["mia"] },
-    { file: "Vampire_TG.glb" },
     { file: "peasant_run.glb" },
   ];
 
