@@ -18,6 +18,28 @@ python3 -m http.server 8000
 
 Then open [http://localhost:8000](http://localhost:8000).
 
+The standalone full-screen workflow is available at
+[http://localhost:8000/workflow.html](http://localhost:8000/workflow.html).
+
+## Full-screen workflow
+
+`workflow.html` presents the four TailorRig stages in one persistent Three.js
+viewport. Template changes keep the current camera and lighting, stages 2 and 3
+load the rig without starting its embedded animation, and stage 4 plays the
+selected animation GLB.
+
+Stage 1 renders every template joint as a Body bone. Stage 2 uses only the same
+case-insensitive name keywords as the main viewer (`skirt`, `hair`, `sleeve`,
+`cape`, and `accessory`); it does not infer auxiliary chains from generic bone
+names or hierarchy.
+
+- Template models: `source/workflow/templates/`
+- Auxiliary-bone and skinning model: `source/workflow/stage2_3/514_WD.glb`
+- Animation models: `source/workflow/stage4/`
+
+Update the `TEMPLATES`, `RIG_URL`, and `ANIMATIONS` constants at the top of
+`static/js/workflow.js` when the final pipeline uses one continuous mesh.
+
 ## Current scope
 
 - Text-focused MVP

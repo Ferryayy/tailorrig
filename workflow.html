@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive TailorRig workflow demonstration.">
+  <title>TailorRig Workflow</title>
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans" rel="stylesheet">
+  <link rel="stylesheet" href="./static/css/workflow.css?v=20260902-3">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="./static/js/workflow.js?v=20260902-3"></script>
+</head>
+<body>
+  <main class="workflow-shell" aria-label="Interactive rigging workflow">
+    <section class="workflow-stage" aria-label="Interactive 3D viewport">
+      <canvas id="workflow-canvas" aria-label="Interactive TailorRig 3D model"></canvas>
+      <div class="workflow-status" id="workflow-status" role="status">Loading 3D model…</div>
+      <p class="viewport-hint">Drag to rotate · Scroll or pinch to zoom</p>
+    </section>
+
+    <aside class="workflow-panel" aria-label="Workflow controls">
+      <div class="step-kicker"><span id="step-number">01</span><span>/ 04</span></div>
+      <p class="step-name" id="step-name">Template</p>
+      <div class="choice-list" id="choice-list" aria-label="Template selection"></div>
+      <div class="panel-footer">
+        <div class="step-track" id="step-track" aria-label="Step 1 of 4">
+          <span class="is-active"></span><span></span><span></span><span></span>
+        </div>
+        <div class="panel-actions">
+          <button class="back-button" id="back-button" type="button" hidden>Back</button>
+          <button class="next-button" id="next-button" type="button" disabled>Next <span aria-hidden="true">→</span></button>
+        </div>
+      </div>
+    </aside>
+  </main>
+</body>
+</html>
