@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import {
   BONE_KEYWORDS,
@@ -10,11 +11,19 @@ import {
 
 const TEMPLATE_ROOT = "./source/workflow/templates";
 const RIG_URL = "./source/workflow/stage2_3/514_WD.glb";
-const TEMPLATES = Array.from({ length: 10 }, (_, index) => ({
-  label: `Template ${String(index + 1).padStart(2, "0")}`,
-  meta: `template${index}`,
-  url: `${TEMPLATE_ROOT}/H_Ace_01_template${index}_predict.glb`,
-}));
+const TEMPLATES = [
+  ...Array.from({ length: 10 }, (_, index) => ({
+    label: `Template ${String(index + 1).padStart(2, "0")}`,
+    meta: `template${index}`,
+    url: `${TEMPLATE_ROOT}/514_mesh_template${index}_predict.fbx`,
+  })),
+  {
+    label: "Template 11",
+    meta: "template11",
+    url: RIG_URL,
+    bodyOnly: true,
+  },
+];
 const ANIMATIONS = [
   { label: "514 WD", meta: "Take 001", url: "./source/workflow/stage4/514_WD.glb" },
 ];
@@ -46,7 +55,8 @@ const BONE_REVEAL_DURATION_MS = 320;
 const CYLINDER_UP_AXIS = new THREE.Vector3(0, 1, 0);
 const INITIAL_VIEW_DIRECTION = new THREE.Vector3(0.82, 0.24, 1.4).normalize();
 
-const loader = new GLTFLoader();
+const gltfLoader = new GLTFLoader();
+const fbxLoader = new FBXLoader();
 const canvas = document.querySelector("#workflow-canvas");
 const stageElement = document.querySelector(".workflow-stage");
 const statusElement = document.querySelector("#workflow-status");
@@ -173,6 +183,14 @@ function easeOutCubic(value) {
   return 1 - ((1 - value) ** 3);
 }
 
+async function loadModelAsset(url) {
+  if (/\.fbx$/i.test(url)) {
+    const scene = await fbxLoader.loadAsync(url);
+    return { scene, animations: scene.animations || [] };
+  }
+  return gltfLoader.loadAsync(url);
+}
+
 function boxCorners(box) {
   const { min, max } = box;
   return [
@@ -287,7 +305,7 @@ class WorkflowViewer {
     const generation = ++this.loadGeneration;
     showStatus(playAnimation ? "Loading animation…" : "Loading 3D model…");
     const [gltf, boneLabels] = await Promise.all([
-      loader.loadAsync(url),
+      loadModelAsset(url),
       loadBoneLabelsForModel(url),
     ]);
     if (generation !== this.loadGeneration) {
@@ -710,6 +728,11 @@ function renderEmptyState(message, label) {
   choicesElement.replaceChildren(emptyState);
 }
 
+function templateBoneRecords(template) {
+  if (!template.bodyOnly) return viewer.boneRecords;
+  return viewer.boneRecords.filter(({ group }) => group === "body");
+}
+
 function updateChoiceSelection(activeIndex) {
   choicesElement.querySelectorAll(".choice-button").forEach((button, index) => {
     const isActive = index === activeIndex;
@@ -757,8 +780,9 @@ async function enterStep(stepIndex) {
 
   if (currentStep === 0) {
     renderChoices(TEMPLATES, selectedTemplate, "Template selection");
-    if (await loadSafely(TEMPLATES[selectedTemplate].url, { playAnimation: false })) {
-      viewer.showSkeleton(viewer.boneRecords);
+    const template = TEMPLATES[selectedTemplate];
+    if (await loadSafely(template.url, { playAnimation: false })) {
+      viewer.showSkeleton(templateBoneRecords(template));
     }
     return;
   }
@@ -807,8 +831,9 @@ choicesElement.addEventListener("click", async (event) => {
   if (currentStep === 0) {
     selectedTemplate = index;
     updateChoiceSelection(index);
-    if (await loadSafely(TEMPLATES[index].url, { playAnimation: false })) {
-      viewer.showSkeleton(viewer.boneRecords);
+    const template = TEMPLATES[index];
+    if (await loadSafely(template.url, { playAnimation: false })) {
+      viewer.showSkeleton(templateBoneRecords(template));
     }
     return;
   }

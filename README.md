@@ -39,7 +39,7 @@ bone is matched exactly by `original_name` and keyword classification runs on
 its `display_name`. If the JSON is absent, invalid, or does not contain a bone,
 that bone falls back to its original GLB name.
 
-- Template models: `source/workflow/templates/`
+- Template models (FBX): `source/workflow/templates/`
 - Auxiliary-bone and skinning model: `source/workflow/stage2_3/514_WD.glb`
 - Animation models: `source/workflow/stage4/`
 
