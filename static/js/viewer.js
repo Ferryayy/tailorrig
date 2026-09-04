@@ -1,16 +1,12 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
-
-// Edit this list when the final semantic bone dictionary is ready.
-// Matching is case-insensitive substring matching; unmatched bones become Body.
-const BONE_KEYWORDS = Object.freeze([
-  "skirt",
-  "hair",
-  "sleeve",
-  "cape",
-  "accessory",
-]);
+import {
+  BONE_KEYWORDS,
+  classifyBone,
+  loadBoneLabelsForModel,
+  semanticBoneName,
+} from "./bone-labels.js?v=20260903-1";
 
 const loader = new GLTFLoader();
 const CLAY_COLOR = 0xb8bec8;
@@ -95,11 +91,6 @@ function disposeObjectResources(root) {
 
 function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-function classifyBone(name) {
-  const normalizedName = String(name || "").toLowerCase();
-  return BONE_KEYWORDS.find((keyword) => normalizedName.includes(keyword)) || "body";
 }
 
 function colorForBone(name, fallbackIndex = 0) {
@@ -329,7 +320,10 @@ class RigViewer {
     try {
       this.setupScene();
       this.setupObservers();
-      const gltf = await loader.loadAsync(this.modelUrl);
+      const [gltf, boneLabels] = await Promise.all([
+        loader.loadAsync(this.modelUrl),
+        loadBoneLabelsForModel(this.modelUrl),
+      ]);
       if (loadGeneration !== this.loadGeneration) {
         disposeObjectResources(gltf.scene);
         return;
@@ -340,7 +334,7 @@ class RigViewer {
       this.modelRoot.add(this.model);
       this.scene.add(this.modelRoot);
 
-      this.prepareModel();
+      this.prepareModel(boneLabels);
       this.prepareAnimation(gltf.animations);
       this.fitModelToStage();
       this.buildTextureButton();
@@ -580,7 +574,7 @@ class RigViewer {
 
   }
 
-  prepareModel() {
+  prepareModel(boneLabels) {
     const seenBones = new Set();
 
     this.model.traverse((object) => {
@@ -637,7 +631,12 @@ class RigViewer {
         }
 
         seenBones.add(bone.uuid);
-        this.boneRecords.push({ bone, group: classifyBone(bone.name) });
+        const semanticName = semanticBoneName(bone.name, boneLabels);
+        this.boneRecords.push({
+          bone,
+          group: classifyBone(semanticName),
+          semanticName,
+        });
       });
     });
   }

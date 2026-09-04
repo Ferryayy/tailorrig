@@ -28,10 +28,16 @@ viewport. Template changes keep the current camera and lighting, stages 2 and 3
 load the rig without starting its embedded animation, and stage 4 plays the
 selected animation GLB.
 
-Stage 1 renders every template joint as a Body bone. Stage 2 uses only the same
-case-insensitive name keywords as the main viewer (`skirt`, `hair`, `sleeve`,
-`cape`, and `accessory`); it does not infer auxiliary chains from generic bone
-names or hierarchy.
+Stage 1 renders every template joint as a Body bone. Stage 2 uses the same
+case-insensitive semantic keywords as the main viewer (`skirt`, `hair`,
+`sleeve`, `cape`, and `accessory`); it does not infer auxiliary chains from
+generic bone names or hierarchy.
+
+Both viewers look for an optional annotation file beside each GLB with the same
+basename (for example, `514_WD.glb` uses `514_WD.json`). When present, each
+bone is matched exactly by `original_name` and keyword classification runs on
+its `display_name`. If the JSON is absent, invalid, or does not contain a bone,
+that bone falls back to its original GLB name.
 
 - Template models: `source/workflow/templates/`
 - Auxiliary-bone and skinning model: `source/workflow/stage2_3/514_WD.glb`
@@ -75,7 +81,8 @@ Each card starts in Mesh mode:
 - Every model uses the same opaque neutral clay material in the viewer (color `#b8bec8`, metalness `0`, roughness `0.82`). The source GLB files are not modified.
 - Coincident split vertices are smoothed at runtime when their exported normals fall within the crease threshold, which reduces faceted or rippled shading while preserving intentional hard edges.
 - The initial camera distance is calculated from all eight bounding-box corners, the camera field of view, and the live canvas aspect ratio so each character starts fully framed.
-- Semantic bone buttons are generated from bone names after the GLB loads.
+- Semantic bone buttons are generated from annotation display names when a
+  matching sidecar JSON exists, otherwise from the original GLB bone names.
 - A `Tex` button is generated immediately after `Mesh` only when the loaded GLB's original material references a texture. Texture-less models do not show the button.
 - Bone-name matching is case-insensitive substring matching.
 - Bones that match no semantic keyword are grouped under Body.
@@ -83,7 +90,8 @@ Each card starts in Mesh mode:
 - Clicking the active bone button again removes the overlay and returns to Mesh only.
 - Weights blends each vertex from the stable colors of its influencing bones.
 
-Edit `BONE_KEYWORDS` near the top of `static/js/viewer.js` when the final semantic dictionary is ready:
+Edit `BONE_KEYWORDS` in `static/js/bone-labels.js` to change the shared semantic
+dictionary:
 
 ```js
 const BONE_KEYWORDS = ["skirt", "hair", "sleeve", "cape", "accessory"];

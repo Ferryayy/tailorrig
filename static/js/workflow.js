@@ -1,6 +1,12 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import {
+  BONE_KEYWORDS,
+  classifyBone,
+  loadBoneLabelsForModel,
+  semanticBoneName,
+} from "./bone-labels.js?v=20260903-1";
 
 const TEMPLATE_ROOT = "./source/workflow/templates";
 const RIG_URL = "./source/workflow/stage2_3/514_WD.glb";
@@ -10,19 +16,24 @@ const TEMPLATES = Array.from({ length: 10 }, (_, index) => ({
   url: `${TEMPLATE_ROOT}/H_Ace_01_template${index}_predict.glb`,
 }));
 const ANIMATIONS = [
-  { label: "TG Motion", meta: "peasant_TG", url: "./source/workflow/stage4/peasant_TG.glb" },
-  { label: "WD Motion", meta: "peasant_WD", url: "./source/workflow/stage4/peasant_WD.glb" },
-  { label: "Run", meta: "peasant_run", url: "./source/workflow/stage4/peasant_run.glb" },
+  { label: "514 WD", meta: "Take 001", url: "./source/workflow/stage4/514_WD.glb" },
 ];
 const STEPS = ["Template", "Auxiliary Bones", "Skinning", "Animation"];
-const BONE_KEYWORDS = Object.freeze(["skirt", "hair", "sleeve", "cape", "accessory"]);
 
 const CLAY_COLOR = 0xb8bec8;
 const CLAY_ROUGHNESS = 0.82;
 const MODEL_TARGET_SIZE = 2.25;
 const CAMERA_PADDING = 1.14;
 const NORMAL_CREASE_COSINE = Math.cos(THREE.MathUtils.degToRad(52));
-const SKELETON_COLOR = new THREE.Color(0x2f80ed);
+const BONE_GROUP_COLORS = Object.freeze({
+  body: 0x2f80ed,
+  skirt: 0xf59e0b,
+  hair: 0x8b5cf6,
+  sleeve: 0x10b981,
+  cape: 0xef476f,
+  accessory: 0x14b8a6,
+});
+const DEFAULT_BONE_GROUP_COLOR = 0x64748b;
 const JOINT_RADIUS = 0.027;
 const BONE_RADIUS = 0.012;
 const CYLINDER_UP_AXIS = new THREE.Vector3(0, 1, 0);
@@ -255,7 +266,10 @@ class WorkflowViewer {
     if (!force && this.currentUrl === url && this.isPlayingAnimation === playAnimation) return;
     const generation = ++this.loadGeneration;
     showStatus(playAnimation ? "Loading animation…" : "Loading 3D model…");
-    const gltf = await loader.loadAsync(url);
+    const [gltf, boneLabels] = await Promise.all([
+      loader.loadAsync(url),
+      loadBoneLabelsForModel(url),
+    ]);
     if (generation !== this.loadGeneration) {
       disposeObjectResources(gltf.scene);
       return;
@@ -265,7 +279,7 @@ class WorkflowViewer {
     this.modelRoot = new THREE.Group();
     this.modelRoot.add(gltf.scene);
     this.scene.add(this.modelRoot);
-    this.prepareModel();
+    this.prepareModel(boneLabels);
     if (playAnimation) this.prepareAnimation(gltf.animations);
     this.fitModelToStage(!this.hasFramedFirstModel);
     this.hasFramedFirstModel = true;
@@ -274,12 +288,17 @@ class WorkflowViewer {
     hideStatus();
   }
 
-  prepareModel() {
+  prepareModel(boneLabels) {
     const seenBones = new Set();
     this.modelRoot.traverse((object) => {
       if (object.isBone && !seenBones.has(object.uuid)) {
         seenBones.add(object.uuid);
-        this.boneRecords.push({ bone: object });
+        const semanticName = semanticBoneName(object.name, boneLabels);
+        this.boneRecords.push({
+          bone: object,
+          group: classifyBone(semanticName),
+          semanticName,
+        });
       }
 
       if (!object.isMesh) return;
@@ -428,22 +447,50 @@ class WorkflowViewer {
   }
 
   showSkeleton(records) {
+    this.showSkeletonGroups([{ group: "body", records }]);
+  }
+
+  showAuxiliarySkeleton(selectedGroups) {
+    const selectedGroupSet = new Set(selectedGroups);
+    const groups = [
+      {
+        group: "body",
+        records: this.boneRecords.filter(({ group }) => group === "body"),
+      },
+      ...BONE_KEYWORDS
+        .filter((group) => selectedGroupSet.has(group))
+        .map((group) => ({
+          group,
+          records: this.boneRecords.filter((record) => record.group === group),
+        })),
+    ];
+    this.showSkeletonGroups(groups);
+  }
+
+  showSkeletonGroups(groups) {
     this.showMesh();
     const visual = new THREE.Group();
-    const material = new THREE.MeshStandardMaterial({
-      color: SKELETON_COLOR,
-      emissive: SKELETON_COLOR.clone().multiplyScalar(0.16),
-      metalness: 0,
-      roughness: 0.42,
-      depthTest: false,
-      depthWrite: false,
-      toneMapped: false,
-    });
+    const materials = new Map();
+    const materialForGroup = (group) => {
+      if (materials.has(group)) return materials.get(group);
+      const color = new THREE.Color(BONE_GROUP_COLORS[group] ?? DEFAULT_BONE_GROUP_COLOR);
+      const material = new THREE.MeshStandardMaterial({
+        color,
+        emissive: color.clone().multiplyScalar(0.16),
+        metalness: 0,
+        roughness: 0.42,
+        depthTest: false,
+        depthWrite: false,
+        toneMapped: false,
+      });
+      materials.set(group, material);
+      return material;
+    };
     const jointGeometry = new THREE.SphereGeometry(JOINT_RADIUS, 16, 12);
     const boneGeometry = new THREE.CylinderGeometry(BONE_RADIUS, BONE_RADIUS, 1, 12, 1, false);
-    this.skeletonResources = { material, jointGeometry, boneGeometry };
+    this.skeletonResources = { materials, jointGeometry, boneGeometry };
     const visibleJointIds = new Set();
-    const addJoint = (bone) => {
+    const addJoint = (bone, material) => {
       if (visibleJointIds.has(bone.uuid)) return;
       visibleJointIds.add(bone.uuid);
       const joint = new THREE.Mesh(jointGeometry, material);
@@ -452,14 +499,17 @@ class WorkflowViewer {
       this.skeletonJoints.push({ bone, mesh: joint });
     };
 
-    records.forEach(({ bone }) => {
-      addJoint(bone);
-      if (!bone.parent?.isBone) return;
-      addJoint(bone.parent);
-      const segment = new THREE.Mesh(boneGeometry, material);
-      segment.renderOrder = 10;
-      visual.add(segment);
-      this.skeletonSegments.push({ bone, parentBone: bone.parent, mesh: segment });
+    groups.forEach(({ group, records }) => {
+      const material = materialForGroup(group);
+      records.forEach(({ bone }) => {
+        addJoint(bone, material);
+        if (!bone.parent?.isBone) return;
+        addJoint(bone.parent, material);
+        const segment = new THREE.Mesh(boneGeometry, material);
+        segment.renderOrder = 10;
+        visual.add(segment);
+        this.skeletonSegments.push({ bone, parentBone: bone.parent, mesh: segment });
+      });
     });
     this.skeletonVisual = visual;
     this.scene.add(visual);
@@ -487,9 +537,7 @@ class WorkflowViewer {
     return BONE_KEYWORDS.map((keyword) => ({
       label: titleCase(keyword),
       meta: keyword,
-      records: this.boneRecords.filter(({ bone }) => (
-        String(bone.name || "").toLowerCase().includes(keyword)
-      )),
+      records: this.boneRecords.filter(({ group }) => group === keyword),
     })).filter(({ records }) => records.length > 0);
   }
 
@@ -498,7 +546,7 @@ class WorkflowViewer {
     this.scene.remove(this.skeletonVisual);
     this.skeletonResources?.jointGeometry.dispose();
     this.skeletonResources?.boneGeometry.dispose();
-    this.skeletonResources?.material.dispose();
+    this.skeletonResources?.materials.forEach((material) => material.dispose());
     this.skeletonVisual = null;
     this.skeletonResources = null;
     this.skeletonJoints = [];
@@ -533,7 +581,8 @@ class WorkflowViewer {
 const viewer = new WorkflowViewer();
 let currentStep = 0;
 let selectedTemplate = 0;
-let selectedAuxiliary = 0;
+const selectedAuxiliaryGroups = new Set();
+let hasInitializedAuxiliarySelection = false;
 let selectedAnimation = 0;
 let skinningVisible = false;
 let isBusy = false;
@@ -568,6 +617,21 @@ function renderChoices(items, activeIndex, label) {
     button.type = "button";
     button.dataset.index = String(index);
     button.setAttribute("aria-pressed", String(index === activeIndex));
+    button.innerHTML = choiceMarkup(item);
+    return button;
+  }));
+}
+
+function renderMultiChoices(items, activeValues, label) {
+  choicesElement.setAttribute("aria-label", label);
+  choicesElement.replaceChildren(...items.map((item, index) => {
+    const isActive = activeValues.has(item.meta);
+    const button = document.createElement("button");
+    button.className = `choice-button${isActive ? " is-active" : ""}`;
+    button.type = "button";
+    button.dataset.index = String(index);
+    button.dataset.value = item.meta;
+    button.setAttribute("aria-pressed", String(isActive));
     button.innerHTML = choiceMarkup(item);
     return button;
   }));
@@ -639,13 +703,20 @@ async function enterStep(stepIndex) {
     if (!await loadSafely(RIG_URL, { playAnimation: false })) return;
     const groups = viewer.getNamedAuxiliaryGroups();
     if (groups.length === 0) {
-      viewer.showMesh();
+      viewer.showAuxiliarySkeleton(selectedAuxiliaryGroups);
       renderEmptyState("No labeled auxiliary bones", "Auxiliary bone selection");
       return;
     }
-    selectedAuxiliary = Math.min(selectedAuxiliary, groups.length - 1);
-    renderChoices(groups, selectedAuxiliary, "Auxiliary bone selection");
-    viewer.showSkeleton(groups[selectedAuxiliary].records);
+    const availableGroups = new Set(groups.map(({ meta }) => meta));
+    [...selectedAuxiliaryGroups].forEach((group) => {
+      if (!availableGroups.has(group)) selectedAuxiliaryGroups.delete(group);
+    });
+    if (!hasInitializedAuxiliarySelection) {
+      selectedAuxiliaryGroups.add(groups[0].meta);
+      hasInitializedAuxiliarySelection = true;
+    }
+    renderMultiChoices(groups, selectedAuxiliaryGroups, "Auxiliary bone multi-selection");
+    viewer.showAuxiliarySkeleton(selectedAuxiliaryGroups);
     return;
   }
 
@@ -676,10 +747,14 @@ choicesElement.addEventListener("click", async (event) => {
   }
 
   if (currentStep === 1) {
-    selectedAuxiliary = index;
-    updateChoiceSelection(index);
     const group = viewer.getNamedAuxiliaryGroups()[index];
-    if (group) viewer.showSkeleton(group.records);
+    if (!group) return;
+    if (selectedAuxiliaryGroups.has(group.meta)) selectedAuxiliaryGroups.delete(group.meta);
+    else selectedAuxiliaryGroups.add(group.meta);
+    const isActive = selectedAuxiliaryGroups.has(group.meta);
+    button.classList.toggle("is-active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+    viewer.showAuxiliarySkeleton(selectedAuxiliaryGroups);
     return;
   }
 
