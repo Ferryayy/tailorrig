@@ -6,7 +6,7 @@ import {
   classifyBone,
   loadBoneLabelsForModel,
   semanticBoneName,
-} from "./bone-labels.js?v=20260903-1";
+} from "./bone-labels.js?v=20260904-1";
 
 const TEMPLATE_ROOT = "./source/workflow/templates";
 const RIG_URL = "./source/workflow/stage2_3/514_WD.glb";
@@ -32,6 +32,11 @@ const BONE_GROUP_COLORS = Object.freeze({
   sleeve: 0x10b981,
   cape: 0xef476f,
   accessory: 0x14b8a6,
+  collar: 0xec4899,
+  correction: 0x84cc16,
+  face: 0x06b6d4,
+  muscle: 0xf97316,
+  twist: 0x4f46e5,
 });
 const DEFAULT_BONE_GROUP_COLOR = 0x64748b;
 const JOINT_RADIUS = 0.027;
@@ -597,7 +602,7 @@ class WorkflowViewer {
       label: titleCase(keyword),
       meta: keyword,
       records: this.boneRecords.filter(({ group }) => group === keyword),
-    })).filter(({ records }) => records.length > 0);
+    }));
   }
 
   clearSkeletonVisual() {
@@ -762,19 +767,19 @@ async function enterStep(stepIndex) {
     choicesElement.replaceChildren();
     if (!await loadSafely(RIG_URL, { playAnimation: false })) return;
     const groups = viewer.getNamedAuxiliaryGroups();
-    if (groups.length === 0) {
-      viewer.showAuxiliarySkeleton(selectedAuxiliaryGroups);
-      renderEmptyState("No labeled auxiliary bones", "Auxiliary bone selection");
-      return;
-    }
-    const availableGroups = new Set(groups.map(({ meta }) => meta));
+    const availableGroups = new Set(
+      groups.filter(({ records }) => records.length > 0).map(({ meta }) => meta),
+    );
     [...selectedAuxiliaryGroups].forEach((group) => {
       if (!availableGroups.has(group)) selectedAuxiliaryGroups.delete(group);
     });
     const animatedGroups = [];
     if (!hasInitializedAuxiliarySelection) {
-      selectedAuxiliaryGroups.add(groups[0].meta);
-      animatedGroups.push(groups[0].meta);
+      const firstAvailableGroup = groups.find(({ records }) => records.length > 0);
+      if (firstAvailableGroup) {
+        selectedAuxiliaryGroups.add(firstAvailableGroup.meta);
+        animatedGroups.push(firstAvailableGroup.meta);
+      }
       hasInitializedAuxiliarySelection = true;
     }
     renderMultiChoices(groups, selectedAuxiliaryGroups, "Auxiliary bone multi-selection");
@@ -810,7 +815,7 @@ choicesElement.addEventListener("click", async (event) => {
 
   if (currentStep === 1) {
     const group = viewer.getNamedAuxiliaryGroups()[index];
-    if (!group) return;
+    if (!group || group.records.length === 0) return;
     const wasSelected = selectedAuxiliaryGroups.has(group.meta);
     if (wasSelected) selectedAuxiliaryGroups.delete(group.meta);
     else selectedAuxiliaryGroups.add(group.meta);

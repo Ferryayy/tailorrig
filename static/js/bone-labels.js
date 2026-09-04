@@ -1,9 +1,14 @@
 export const BONE_KEYWORDS = Object.freeze([
-  "skirt",
-  "hair",
-  "sleeve",
-  "cape",
   "accessory",
+  "cape",
+  "collar",
+  "correction",
+  "face",
+  "hair",
+  "muscle",
+  "skirt",
+  "sleeve",
+  "twist",
 ]);
 
 const annotationCache = new Map();

@@ -6,7 +6,7 @@ import {
   classifyBone,
   loadBoneLabelsForModel,
   semanticBoneName,
-} from "./bone-labels.js?v=20260903-1";
+} from "./bone-labels.js?v=20260904-1";
 
 const loader = new GLTFLoader();
 const CLAY_COLOR = 0xb8bec8;
@@ -22,6 +22,11 @@ const BONE_GROUP_COLORS = Object.freeze({
   sleeve: 0x10b981,
   cape: 0xef476f,
   accessory: 0x14b8a6,
+  collar: 0xec4899,
+  correction: 0x84cc16,
+  face: 0x06b6d4,
+  muscle: 0xf97316,
+  twist: 0x4f46e5,
 });
 const DEFAULT_BONE_GROUP_COLOR = 0x64748b;
 const JOINT_RADIUS = 0.027;
