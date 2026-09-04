@@ -36,6 +36,8 @@ const BONE_GROUP_COLORS = Object.freeze({
 const DEFAULT_BONE_GROUP_COLOR = 0x64748b;
 const JOINT_RADIUS = 0.027;
 const BONE_RADIUS = 0.012;
+const BONE_REVEAL_STEP_MS = 140;
+const BONE_REVEAL_DURATION_MS = 320;
 const CYLINDER_UP_AXIS = new THREE.Vector3(0, 1, 0);
 const INITIAL_VIEW_DIRECTION = new THREE.Vector3(0.82, 0.24, 1.4).normalize();
 
@@ -154,6 +156,18 @@ function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+function orderedBoneSequence(semanticName, group) {
+  const match = String(semanticName || "").match(
+    new RegExp(`(?:^|_)${group}_(\\d+)_(\\d+)(?:_|$)`, "i"),
+  );
+  if (!match) return null;
+  return [Number(match[1]), Number(match[2])];
+}
+
+function easeOutCubic(value) {
+  return 1 - ((1 - value) ** 3);
+}
+
 function boxCorners(box) {
   const { min, max } = box;
   return [
@@ -230,6 +244,7 @@ class WorkflowViewer {
     this.skeletonVisual = null;
     this.skeletonJoints = [];
     this.skeletonSegments = [];
+    this.skeletonRevealStartedAt = null;
     this.mixer = null;
     this.currentUrl = null;
     this.isPlayingAnimation = false;
@@ -256,7 +271,7 @@ class WorkflowViewer {
     if (this.mixer) this.mixer.update(delta);
     if (this.skeletonVisual) {
       this.modelRoot?.updateMatrixWorld(true);
-      this.updateSkeletonVisualPositions();
+      this.updateSkeletonVisualPositions(time);
     }
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
@@ -450,18 +465,21 @@ class WorkflowViewer {
     this.showSkeletonGroups([{ group: "body", records }]);
   }
 
-  showAuxiliarySkeleton(selectedGroups) {
+  showAuxiliarySkeleton(selectedGroups, animatedGroups = []) {
     const selectedGroupSet = new Set(selectedGroups);
+    const animatedGroupSet = new Set(animatedGroups);
     const groups = [
       {
         group: "body",
         records: this.boneRecords.filter(({ group }) => group === "body"),
+        animate: false,
       },
       ...BONE_KEYWORDS
         .filter((group) => selectedGroupSet.has(group))
         .map((group) => ({
           group,
           records: this.boneRecords.filter((record) => record.group === group),
+          animate: animatedGroupSet.has(group),
         })),
     ];
     this.showSkeletonGroups(groups);
@@ -489,47 +507,88 @@ class WorkflowViewer {
     const jointGeometry = new THREE.SphereGeometry(JOINT_RADIUS, 16, 12);
     const boneGeometry = new THREE.CylinderGeometry(BONE_RADIUS, BONE_RADIUS, 1, 12, 1, false);
     this.skeletonResources = { materials, jointGeometry, boneGeometry };
-    const visibleJointIds = new Set();
-    const addJoint = (bone, material) => {
-      if (visibleJointIds.has(bone.uuid)) return;
-      visibleJointIds.add(bone.uuid);
+    const visibleJoints = new Map();
+    const addJoint = (bone, material, reveal = null) => {
+      const existing = visibleJoints.get(bone.uuid);
+      if (existing) {
+        if (!reveal || (existing.reveal && reveal.delay < existing.reveal.delay)) {
+          existing.reveal = reveal;
+        }
+        return;
+      }
       const joint = new THREE.Mesh(jointGeometry, material);
       joint.renderOrder = 11;
       visual.add(joint);
-      this.skeletonJoints.push({ bone, mesh: joint });
+      const entry = { bone, mesh: joint, reveal };
+      visibleJoints.set(bone.uuid, entry);
+      this.skeletonJoints.push(entry);
     };
 
-    groups.forEach(({ group, records }) => {
+    groups.forEach(({ group, records, animate = false }) => {
       const material = materialForGroup(group);
+      const orderedRecords = animate
+        ? records
+          .map((record) => ({ record, order: orderedBoneSequence(record.semanticName, group) }))
+          .filter(({ order }) => order)
+          .sort((left, right) => (
+            left.order[0] - right.order[0]
+            || left.order[1] - right.order[1]
+            || left.record.semanticName.localeCompare(right.record.semanticName)
+          ))
+        : [];
+      const revealByBoneId = new Map(orderedRecords.map(({ record }, index) => [
+        record.bone.uuid,
+        { delay: index * BONE_REVEAL_STEP_MS, duration: BONE_REVEAL_DURATION_MS },
+      ]));
+
       records.forEach(({ bone }) => {
-        addJoint(bone, material);
+        const reveal = revealByBoneId.get(bone.uuid) || null;
+        addJoint(bone, material, reveal);
         if (!bone.parent?.isBone) return;
-        addJoint(bone.parent, material);
+        addJoint(bone.parent, material, reveal ? revealByBoneId.get(bone.parent.uuid) || null : null);
         const segment = new THREE.Mesh(boneGeometry, material);
         segment.renderOrder = 10;
         visual.add(segment);
-        this.skeletonSegments.push({ bone, parentBone: bone.parent, mesh: segment });
+        this.skeletonSegments.push({ bone, parentBone: bone.parent, mesh: segment, reveal });
       });
     });
     this.skeletonVisual = visual;
+    this.skeletonRevealStartedAt = this.skeletonJoints.some(({ reveal }) => reveal)
+      || this.skeletonSegments.some(({ reveal }) => reveal)
+      ? performance.now()
+      : null;
     this.scene.add(visual);
-    this.updateSkeletonVisualPositions();
+    this.updateSkeletonVisualPositions(performance.now());
   }
 
-  updateSkeletonVisualPositions() {
-    this.skeletonJoints.forEach(({ bone, mesh }) => {
+  skeletonRevealProgress(reveal, time) {
+    if (!reveal || this.skeletonRevealStartedAt === null) return 1;
+    const progress = THREE.MathUtils.clamp(
+      (time - this.skeletonRevealStartedAt - reveal.delay) / reveal.duration,
+      0,
+      1,
+    );
+    return easeOutCubic(progress);
+  }
+
+  updateSkeletonVisualPositions(time = performance.now()) {
+    this.skeletonJoints.forEach(({ bone, mesh, reveal }) => {
+      const progress = this.skeletonRevealProgress(reveal, time);
+      mesh.visible = progress > 0;
       mesh.position.copy(bone.getWorldPosition(new THREE.Vector3()));
+      mesh.scale.setScalar(progress);
     });
-    this.skeletonSegments.forEach(({ bone, parentBone, mesh }) => {
+    this.skeletonSegments.forEach(({ bone, parentBone, mesh, reveal }) => {
       const jointPosition = bone.getWorldPosition(new THREE.Vector3());
       const parentPosition = parentBone.getWorldPosition(new THREE.Vector3());
       const direction = jointPosition.clone().sub(parentPosition);
       const length = direction.length();
-      mesh.visible = length > Number.EPSILON;
+      const progress = this.skeletonRevealProgress(reveal, time);
+      mesh.visible = length > Number.EPSILON && progress > 0;
       if (!mesh.visible) return;
-      mesh.position.copy(parentPosition).add(jointPosition).multiplyScalar(0.5);
+      mesh.position.copy(parentPosition).addScaledVector(direction, progress * 0.5);
       mesh.quaternion.setFromUnitVectors(CYLINDER_UP_AXIS, direction.normalize());
-      mesh.scale.set(1, length, 1);
+      mesh.scale.set(1, length * progress, 1);
     });
   }
 
@@ -551,6 +610,7 @@ class WorkflowViewer {
     this.skeletonResources = null;
     this.skeletonJoints = [];
     this.skeletonSegments = [];
+    this.skeletonRevealStartedAt = null;
   }
 
   disposeCurrentModel() {
@@ -711,12 +771,14 @@ async function enterStep(stepIndex) {
     [...selectedAuxiliaryGroups].forEach((group) => {
       if (!availableGroups.has(group)) selectedAuxiliaryGroups.delete(group);
     });
+    const animatedGroups = [];
     if (!hasInitializedAuxiliarySelection) {
       selectedAuxiliaryGroups.add(groups[0].meta);
+      animatedGroups.push(groups[0].meta);
       hasInitializedAuxiliarySelection = true;
     }
     renderMultiChoices(groups, selectedAuxiliaryGroups, "Auxiliary bone multi-selection");
-    viewer.showAuxiliarySkeleton(selectedAuxiliaryGroups);
+    viewer.showAuxiliarySkeleton(selectedAuxiliaryGroups, animatedGroups);
     return;
   }
 
@@ -749,12 +811,13 @@ choicesElement.addEventListener("click", async (event) => {
   if (currentStep === 1) {
     const group = viewer.getNamedAuxiliaryGroups()[index];
     if (!group) return;
-    if (selectedAuxiliaryGroups.has(group.meta)) selectedAuxiliaryGroups.delete(group.meta);
+    const wasSelected = selectedAuxiliaryGroups.has(group.meta);
+    if (wasSelected) selectedAuxiliaryGroups.delete(group.meta);
     else selectedAuxiliaryGroups.add(group.meta);
     const isActive = selectedAuxiliaryGroups.has(group.meta);
     button.classList.toggle("is-active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
-    viewer.showAuxiliarySkeleton(selectedAuxiliaryGroups);
+    viewer.showAuxiliarySkeleton(selectedAuxiliaryGroups, wasSelected ? [] : [group.meta]);
     return;
   }
 
