@@ -257,8 +257,7 @@ class WorkflowViewer {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.055;
     this.controls.enablePan = false;
-    this.controls.autoRotate = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    this.controls.autoRotateSpeed = 0.65;
+    this.controls.autoRotate = false;
 
     this.modelRoot = null;
     this.ground = null;
